@@ -2,11 +2,13 @@ package com.instacart.library.truetime;
 
 import android.content.Context;
 import android.os.SystemClock;
+import android.util.Log;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.Locale;
 
-public class TrueTime {
+public class TrueTime<InstanceType extends TrueTime> {
 
     private static final String TAG = TrueTime.class.getSimpleName();
 
@@ -21,32 +23,10 @@ public class TrueTime {
 
     private String _ntpHost = "1.us.pool.ntp.org";
 
-    /**
-     * @return Date object that returns the current time in the default Timezone
-     */
-    public static Date now() {
-        if (!isInitialized()) {
-            throw new IllegalStateException("You need to call init() on TrueTime at least once.");
-        }
 
-        long cachedSntpTime = _getCachedSntpTime();
-        long cachedDeviceUptime = _getCachedDeviceUptime();
-        long deviceUptime = SystemClock.elapsedRealtime();
-        long now = cachedSntpTime + (deviceUptime - cachedDeviceUptime);
 
-        return new Date(now);
-    }
-
-    public static boolean isInitialized() {
-        return SNTP_CLIENT.wasInitialized() || DISK_CACHE_CLIENT.isTrueTimeCachedFromAPreviousBoot();
-    }
-
-    public static TrueTime build() {
+    public static TrueTime getInstance() {
         return INSTANCE;
-    }
-
-    public static void clearCachedInfo(Context context) {
-        DISK_CACHE_CLIENT.clearCachedInfo(context);
     }
 
     public void initialize() throws IOException {
@@ -54,64 +34,96 @@ public class TrueTime {
         saveTrueTimeInfoToDisk();
     }
 
+    /**Get the True Time as a {@link Date}
+     * @return Date object that returns the current time in the default Timezone
+     */
+    public static Date now() {
+        return new Date(nowLong());
+    }
+
+    /**Get the True Time in Unix Epoch format, milliseconds since 0:00 on 1 January, 1970.*/
+    public static long nowLong() {
+        if (!isInitialized()) {
+            throw new IllegalStateException("You need to call init() on TrueTime at least once.");
+        }
+
+        long cachedSntpTime = _getCachedSntpTime();
+        long cachedDeviceUptime = _getCachedDeviceUptime();
+        long deviceUptime = SystemClock.elapsedRealtime();
+
+        return cachedSntpTime + (deviceUptime - cachedDeviceUptime);
+    }
+
+    public static boolean isInitialized() {
+        return SNTP_CLIENT.wasInitialized() || DISK_CACHE_CLIENT.isTrueTimeCachedFromAPreviousBoot();
+    }
+
+
+
+    public static void clearCachedInfo(Context context) {
+        DISK_CACHE_CLIENT.clearCachedInfo(context);
+    }
+
+
+
     /**
      * Cache TrueTime initialization information in SharedPreferences
      * This can help avoid additional TrueTime initialization on app kills
      */
-    public synchronized TrueTime withSharedPreferences(Context context) {
+    public synchronized  InstanceType withSharedPreferences(Context context) {
         DISK_CACHE_CLIENT.enableDiskCaching(context);
-        return INSTANCE;
+        return (InstanceType)this;
     }
 
-    public synchronized TrueTime withConnectionTimeout(int timeoutInMillis) {
+    public synchronized InstanceType withConnectionTimeout(int timeoutInMillis) {
         _udpSocketTimeoutInMillis = timeoutInMillis;
-        return INSTANCE;
+        return (InstanceType)this;
     }
 
-    public synchronized TrueTime withRootDelayMax(float rootDelayMax) {
+    public synchronized InstanceType withRootDelayMax(float rootDelayMax) {
         if (rootDelayMax > _rootDelayMax) {
-          String log = String.format(Locale.getDefault(),
-              "The recommended max rootDelay value is %f. You are setting it at %f",
-              _rootDelayMax, rootDelayMax);
-          TrueLog.w(TAG, log);
+            String log = String.format(Locale.getDefault(),
+                "The recommended max rootDelay value is %f. You are setting it at %f",
+                _rootDelayMax, rootDelayMax);
+            Log.w(TAG, log);
         }
 
         _rootDelayMax = rootDelayMax;
-        return INSTANCE;
+        return (InstanceType)this;
     }
 
-    public synchronized TrueTime withRootDispersionMax(float rootDispersionMax) {
-      if (rootDispersionMax > _rootDispersionMax) {
-        String log = String.format(Locale.getDefault(),
+    public synchronized InstanceType withRootDispersionMax(float rootDispersionMax) {
+        if (rootDispersionMax > _rootDispersionMax) {
+            Log.w(TAG, String.format(Locale.getDefault(),
             "The recommended max rootDispersion value is %f. You are setting it at %f",
-            _rootDispersionMax, rootDispersionMax);
-        TrueLog.w(TAG, log);
-      }
+            _rootDispersionMax, rootDispersionMax));
+        }
 
-      _rootDispersionMax = rootDispersionMax;
-      return INSTANCE;
+        _rootDispersionMax = rootDispersionMax;
+
+        return (InstanceType)this;
     }
 
-    public synchronized TrueTime withServerResponseDelayMax(int serverResponseDelayInMillis) {
+    public synchronized InstanceType withServerResponseDelayMax(int serverResponseDelayInMillis) {
         _serverResponseDelayMax = serverResponseDelayInMillis;
-        return INSTANCE;
+        return (InstanceType)this;
     }
 
-    public synchronized TrueTime withNtpHost(String ntpHost) {
+    public synchronized InstanceType withNtpHost(String ntpHost) {
         _ntpHost = ntpHost;
-        return INSTANCE;
+        return (InstanceType)this;
     }
-
+/*
     public synchronized TrueTime withLoggingEnabled(boolean isLoggingEnabled) {
         TrueLog.setLoggingEnabled(isLoggingEnabled);
         return INSTANCE;
     }
-
+*/
     // -----------------------------------------------------------------------------------
 
     protected void initialize(String ntpHost) throws IOException {
         if (isInitialized()) {
-            TrueLog.i(TAG, "---- TrueTime already initialized from previous boot/init");
+            Log.w(TAG, "TrueTime already initialized from previous boot/init");
             return;
         }
 
@@ -128,7 +140,7 @@ public class TrueTime {
 
     synchronized static void saveTrueTimeInfoToDisk() {
         if (!SNTP_CLIENT.wasInitialized()) {
-            TrueLog.i(TAG, "---- SNTP client not available. not caching TrueTime info in disk");
+            Log.w(TAG, "SNTP client not available. not caching TrueTime info in disk");
             return;
         }
         DISK_CACHE_CLIENT.cacheTrueTimeInfo(SNTP_CLIENT);

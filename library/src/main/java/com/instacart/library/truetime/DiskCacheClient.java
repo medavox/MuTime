@@ -3,6 +3,7 @@ package com.instacart.library.truetime;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
+import android.util.Log;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -15,10 +16,10 @@ class DiskCacheClient {
 
     private static final String TAG = DiskCacheClient.class.getSimpleName();
 
-    private SharedPreferences _sharedPreferences = null;
+    private SharedPreferences sharedPrefs = null;
 
     void enableDiskCaching(Context context) {
-        _sharedPreferences = context.getSharedPreferences(KEY_CACHED_SHARED_PREFS, MODE_PRIVATE);
+        sharedPrefs = context.getSharedPreferences(KEY_CACHED_SHARED_PREFS, MODE_PRIVATE);
     }
 
     void clearCachedInfo(Context context) {
@@ -38,15 +39,17 @@ class DiskCacheClient {
         long cachedDeviceUptime = sntpClient.getCachedDeviceUptime();
         long bootTime = cachedSntpTime - cachedDeviceUptime;
 
-        TrueLog.d(TAG,
+        Log.d(TAG,
                   String.format("Caching true time info to disk sntp [%s] device [%s] boot [%s]",
                                 cachedSntpTime,
                                 cachedDeviceUptime,
                                 bootTime));
 
-        _sharedPreferences.edit().putLong(DiskCacheClient.KEY_CACHED_BOOT_TIME, bootTime).apply();
-        _sharedPreferences.edit().putLong(DiskCacheClient.KEY_CACHED_DEVICE_UPTIME, cachedDeviceUptime).apply();
-        _sharedPreferences.edit().putLong(DiskCacheClient.KEY_CACHED_SNTP_TIME, cachedSntpTime).apply();
+        SharedPreferences.Editor editor = sharedPrefs.edit();
+        editor.putLong(KEY_CACHED_BOOT_TIME, bootTime);
+        editor.putLong(KEY_CACHED_DEVICE_UPTIME, cachedDeviceUptime);
+        editor.putLong(KEY_CACHED_SNTP_TIME, cachedSntpTime);
+        editor.apply();
 
     }
 
@@ -55,14 +58,14 @@ class DiskCacheClient {
             return false;
         }
 
-        long cachedBootTime = _sharedPreferences.getLong(DiskCacheClient.KEY_CACHED_BOOT_TIME, 0L);
+        long cachedBootTime = sharedPrefs.getLong(KEY_CACHED_BOOT_TIME, 0L);
         if (cachedBootTime == 0) {
             return false;
         }
 
         // has boot time changed (simple check)
         boolean bootTimeChanged = SystemClock.elapsedRealtime() < getCachedDeviceUptime();
-        TrueLog.i(TAG, "---- boot time changed " + bootTimeChanged);
+        Log.i(TAG, "---- boot time changed " + bootTimeChanged);
         return !bootTimeChanged;
     }
 
@@ -71,7 +74,7 @@ class DiskCacheClient {
             return 0L;
         }
 
-        return _sharedPreferences.getLong(DiskCacheClient.KEY_CACHED_DEVICE_UPTIME, 0L);
+        return sharedPrefs.getLong(KEY_CACHED_DEVICE_UPTIME, 0L);
     }
 
     long getCachedSntpTime() {
@@ -79,14 +82,14 @@ class DiskCacheClient {
             return 0L;
         }
 
-        return _sharedPreferences.getLong(DiskCacheClient.KEY_CACHED_SNTP_TIME, 0L);
+        return sharedPrefs.getLong(KEY_CACHED_SNTP_TIME, 0L);
     }
 
     // -----------------------------------------------------------------------------------
 
     private boolean sharedPreferencesUnavailable() {
-        if (_sharedPreferences == null) {
-            TrueLog.w(TAG, "Cannot use disk caching strategy for TrueTime. SharedPreferences unavailable");
+        if (sharedPrefs == null) {
+            Log.w(TAG, "Cannot use disk caching strategy for TrueTime. SharedPreferences unavailable");
             return true;
         }
         return false;

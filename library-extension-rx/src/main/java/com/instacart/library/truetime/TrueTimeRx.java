@@ -1,6 +1,18 @@
 package com.instacart.library.truetime;
 
-import android.content.Context;
+import android.util.Log;
+
+import org.reactivestreams.Publisher;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
@@ -11,56 +23,16 @@ import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.schedulers.Schedulers;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import org.reactivestreams.Publisher;
 
-public class TrueTimeRx
-      extends TrueTime {
+public class TrueTimeRx extends TrueTime<TrueTimeRx> {
 
     private static final TrueTimeRx RX_INSTANCE = new TrueTimeRx();
     private static final String TAG = TrueTimeRx.class.getSimpleName();
 
     private int _retryCount = 50;
 
-    public static TrueTimeRx build() {
+    public static TrueTimeRx getInstance() {
         return RX_INSTANCE;
-    }
-
-    public TrueTimeRx withSharedPreferences(Context context) {
-        super.withSharedPreferences(context);
-        return this;
-    }
-
-    public TrueTimeRx withConnectionTimeout(int timeout) {
-        super.withConnectionTimeout(timeout);
-        return this;
-    }
-
-    public TrueTimeRx withRootDelayMax(float rootDelay) {
-        super.withRootDelayMax(rootDelay);
-        return this;
-    }
-
-    public TrueTimeRx withRootDispersionMax(float rootDispersion) {
-        super.withRootDispersionMax(rootDispersion);
-        return this;
-    }
-
-    public TrueTimeRx withServerResponseDelayMax(int serverResponseDelayInMillis) {
-        super.withServerResponseDelayMax(serverResponseDelayInMillis);
-        return this;
-    }
-
-    public TrueTimeRx withLoggingEnabled(boolean isLoggingEnabled) {
-        super.withLoggingEnabled(isLoggingEnabled);
-        return this;
     }
 
     public TrueTimeRx withRetryCount(int retryCount) {
@@ -86,7 +58,8 @@ public class TrueTimeRx
     /**
      * Initialize TrueTime
      * A single NTP pool server is provided.
-     * Using DNS we resolve that to multiple IP hosts (See {@link #initializeNtp(List)} for manually resolved IPs)
+     * Using DNS we resolve that to multiple IP hosts
+     * (See {@link #initializeNtp(InetAddress...)} for manually resolved IPs)
      *
      * Use this instead of {@link #initializeRx(String)} if you wish to also get additional info for
      * instrumentation/tracking actual NTP response data
@@ -109,12 +82,12 @@ public class TrueTimeRx
      * See https://github.com/instacart/truetime-android/issues/42
      * to understand why you may want to do something like this.
      *
-     * @param resolvedNtpAddresses list of resolved IP addresses for an NTP
+     * @param resolvedNtpAddresses list of resolved IP addresses for an NTP request
      * @return Observable of detailed long[] containing most important parts of the actual NTP response
      * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
      */
-    public Flowable<long[]> initializeNtp(List<InetAddress> resolvedNtpAddresses) {
-        return Flowable.fromIterable(resolvedNtpAddresses)
+    public Flowable<long[]> initializeNtp(InetAddress... resolvedNtpAddresses) {
+        return Flowable.fromArray(resolvedNtpAddresses)
                .compose(performNtpAlgorithm());
     }
 
@@ -165,7 +138,7 @@ public class TrueTimeRx
                           @Override
                           public Flowable<InetAddress> apply(String ntpPoolAddress) {
                               try {
-                                  TrueLog.d(TAG, "---- resolving ntpHost : " + ntpPoolAddress);
+                                  Log.d(TAG, "---- resolving ntpHost : " + ntpPoolAddress);
                                   return Flowable.fromArray(InetAddress.getAllByName(ntpPoolAddress));
                               } catch (UnknownHostException e) {
                                   return Flowable.error(e);
@@ -191,7 +164,7 @@ public class TrueTimeRx
                                       public void subscribe(@NonNull FlowableEmitter<long[]> o)
                                           throws Exception {
 
-                                          TrueLog.d(TAG,
+                                          Log.d(TAG,
                                               "---- requestTime from: " + singleIpHostAddress);
                                           try {
                                               o.onNext(requestTime(singleIpHostAddress));
@@ -207,7 +180,7 @@ public class TrueTimeRx
                                     .doOnError(new Consumer<Throwable>() {
                                         @Override
                                         public void accept(Throwable throwable) {
-                                            TrueLog.e(TAG, "---- Error requesting time", throwable);
+                                            Log.e(TAG, "---- Error requesting time", throwable);
                                         }
                                     })
                                     .retry(_retryCount);
@@ -233,7 +206,7 @@ public class TrueTimeRx
                     }
                 });
 
-                TrueLog.d(TAG, "---- filterLeastRoundTrip: " + responseTimeList);
+                Log.d(TAG, "---- filterLeastRoundTrip: " + responseTimeList);
 
                 return responseTimeList.get(0);
             }
@@ -253,7 +226,7 @@ public class TrueTimeRx
                     }
                 });
 
-                TrueLog.d(TAG, "---- bestResponse: " + Arrays.toString(bestResponses.get(bestResponses.size() / 2)));
+                Log.d(TAG, "---- bestResponse: " + Arrays.toString(bestResponses.get(bestResponses.size() / 2)));
 
                 return bestResponses.get(bestResponses.size() / 2);
             }
