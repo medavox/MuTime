@@ -2,8 +2,6 @@
 
 ![TrueTime](truetime.png "TrueTime for Android")
 
-*Make sure to check out our counterpart too: [TrueTime](https://github.com/instacart/TrueTime.swift), an NTP library for Swift.*
-
 NTP client for Android. Calculate the date and time "now" impervious to manual changes to device clock time.
 
 In certain applications it becomes important to get the real or "true" date and time. On most devices, if the clock has been changed manually, then a `new Date()` instance gives you a time impacted by local settings.
@@ -60,11 +58,9 @@ You can then use:
 Date noReallyThisIsTheTrueDateAndTime = TrueTime.now();
 ```
 
-... #winning
-
 ## Rx-ified Version
 
-If you're down to using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` api which takes in an NTP pool server host.
+If you're using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` api which takes in an NTP pool server host.
 
 ```java
 TrueTimeRx.build()
@@ -85,11 +81,11 @@ TrueTimeRx.now(); // return a Date object with the "true" time.
 
 ### What is nifty about the Rx version?
 
-* as against just SNTP, you get full NTP (read: far more accurate time)
-* the NTP pool address you provide is resolved into multiple IP addresses
-* we query each IP multiple times, guarding against checks, and taking the best response
-* if any one of the requests fail, we retry that failed request (alone) for a specified number of times
-* we collect all the responses and again filter for the best result as per the NTP spec
+* Implements the full NTP, as opposed to the more basic SNTP (read: far more accurate time)
+* The NTP pool address you provide is resolved into multiple IP addresses
+* We query each IP multiple times, guarding against checks, and taking the best response
+* If any one of the requests fail, we retry that failed request (alone) for a specified number of times
+* We collect all the responses and again filter for the best result as per the NTP spec
 
 ## Notes/tips:
 
