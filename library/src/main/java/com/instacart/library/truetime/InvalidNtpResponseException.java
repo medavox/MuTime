@@ -3,14 +3,14 @@ package com.instacart.library.truetime;
 import java.io.IOException;
 import java.util.Locale;
 
-public class InvalidNtpServerResponseException
+public class InvalidNtpResponseException
       extends IOException {
 
     public final String property;
     public final float expectedValue;
     public final float actualValue;
 
-    InvalidNtpServerResponseException(String detailMessage) {
+    InvalidNtpResponseException(String detailMessage) {
         super(detailMessage);
 
         this.property = "na";
@@ -21,14 +21,14 @@ public class InvalidNtpServerResponseException
   /**
    *
    * @param message An informative message that api users can use to know what went wrong.
-   *                should contain {@link this#property} {@link this#expectedValue} and
-   *                {@link this#actualValue} as format specifiers (in that order)
+   *                should contain {@link #property}, {@link #expectedValue} and
+   *                {@link #actualValue} as format specifiers (in that order)
    * @param property  property that caused the invalid NTP response
    */
-  InvalidNtpServerResponseException(String message,
-      String property,
-      float actualValue,
-      float expectedValue) {
+  InvalidNtpResponseException(String message,
+                              String property,
+                              float actualValue,
+                              float expectedValue) {
 
       super(String.format(Locale.getDefault(),
           message,
