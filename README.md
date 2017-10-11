@@ -89,14 +89,14 @@ TrueTimeRx.now(); // return a Date object with the "true" time.
 
 ## Notes/tips:
 
-* Each `initialize` call makes an SNTP network request. TrueTime needs to be `initialize`d only once ever, per device boot. Use TrueTime's `withSharedPreferences` option to make use of this feature and avoid repeated network request calls.
-* Preferable use dependency injection (like [Dagger](http://square.github.io/dagger/)) and create a TrueTime @Singleton object
+* Each `initialize` call makes an SNTP network request. TrueTime needs to be `initialize`d only once per device boot, if you use TrueTime's `withSharedPreferences` option to cache retrieved time-offset values and avoid repeated network requests.
+* Preferably use dependency injection (like [Dagger](http://square.github.io/dagger/)) and create a TrueTime @Singleton object
 * You can read up on Wikipedia the differences between [SNTP](https://en.wikipedia.org/wiki/Network_Time_Protocol#SNTP) and [NTP](https://www.meinbergglobal.com/english/faq/faq_37.htm).
 * TrueTime is also [available for iOS/Swift](https://github.com/instacart/truetime.swift)
 
 ## Troubleshooting/Exception handling:
 
-When you execute the TrueTime initialization, you are very highly likely to get an `InvalidNtpServerResponseException` because of root delay violation or  root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
+When you execute the TrueTime initialization, you are very highly likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
 
 ### Why does this happen?
 
@@ -108,7 +108,7 @@ The NTP protocol works on [UDP](https://en.wikipedia.org/wiki/User_Datagram_Prot
 
 ([Wikipedia's page](https://en.wikipedia.org/wiki/User_Datagram_Protocol), emphasis our own)
 
-This means it is highly plausible that we get faulty data packets. These are caught by the library and surfaced to the api consumer as an `InvalidNtpServerResponseException`. See this [portion of the code](https://github.com/instacart/truetime-android/blob/master/library/src/main/java/com/instacart/library/truetime/SntpClient.java#L137) for the various checks that we guard against.
+This means it is highly plausible that we get faulty data packets. These are caught by the library and surfaced to the API consumer as an `InvalidNtpServerResponseException`. See this [portion of the code](https://github.com/medavox/truetime-android/blob/master/library/src/main/java/com/instacart/library/truetime/SntpClient.java#L141) for the various checks that we guard against.
 
 These guards are *extremely* important to guarantee accurate time and cannot be avoided.
 
@@ -117,7 +117,7 @@ These guards are *extremely* important to guarantee accurate time and cannot be 
 
 It's pretty simple:
 
-* keep retrying the request, until you get a successful one. Yes it does happen eventually :)
+* Keep retrying the request, until you get a successful one. Yes it does happen eventually :)
 * Try picking a better NTP pool server. In our experience `time.apple.com` has worked best
 
 Or if you want the library to just handle that, use the Rx-ified version of the library (note the -rx suffix):
@@ -126,7 +126,18 @@ Or if you want the library to just handle that, use the Rx-ified version of the 
     compile 'com.github.instacart.truetime-android:library-extension-rx:<release-version>'
 ```
 
-With TrueTimeRx, we go the whole nine yards and implement the complete NTP Spec (we resolve the DNS for the provided NTP host to single IP addresses, shoot multiple requests to that single IP, guard against the above mentioned checks, retry every single failed request, filter the best response and persist that to disk). If you don't use TrueTimeRx, you don't get these benefits.
+With TrueTimeRx, we go the whole nine yards and implement the complete NTP Spec.
+
+We:-
+
+* resolve the DNS for the provided NTP host to single IP addresses,
+* shoot multiple requests to that single IP, 
+* guard against the above mentioned checks,
+* retry every single failed request,
+* filter the best response,
+* and persist that to disk.
+
+If you don't use TrueTimeRx, you don't get these benefits.
 
 We welcome PRs for folks who wish to replicate the functionality in the vanilla TrueTime version. _We don't have plans of re-implementing that functionality atm_ in the vanilla/simple version of TrueTime.
 
