@@ -1,4 +1,4 @@
-package com.instacart.library.truetime;
+package com.medavox.library.mutime;
 
 import android.content.Context;
 import android.os.SystemClock;
@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Locale;
 
-public class TrueTime<InstanceType extends TrueTime> {
+public class MuTime<InstanceType extends MuTime> {
 
-    private static final String TAG = TrueTime.class.getSimpleName();
+    private static final String TAG = MuTime.class.getSimpleName();
 
-    private static final TrueTime INSTANCE = new TrueTime();
+    private static final MuTime INSTANCE = new MuTime();
     private static DiskCacheClient diskCacheClient;
     private static final SntpClient SNTP_CLIENT = new SntpClient();
 
@@ -23,7 +23,7 @@ public class TrueTime<InstanceType extends TrueTime> {
 
     private String _ntpHost = "1.us.pool.ntp.org";
 
-    public static TrueTime getInstance() {
+    public static MuTime getInstance() {
         return INSTANCE;
     }
 
@@ -34,7 +34,7 @@ public class TrueTime<InstanceType extends TrueTime> {
 
     protected void initialize(String ntpHost) throws IOException {
         if (isInitialized()) {
-            Log.w(TAG, "TrueTime already initialized from previous boot/init");
+            Log.w(TAG, "MuTime already initialized from previous boot/init");
             return;
         }
 
@@ -55,7 +55,7 @@ public class TrueTime<InstanceType extends TrueTime> {
     /**Get the True Time in Unix Epoch format, milliseconds since 0:00 on 1 January, 1970.*/
     public static long nowLong() {
         if (!isInitialized()) {
-            throw new IllegalStateException("You need to call init() on TrueTime at least once.");
+            throw new IllegalStateException("You need to call init() on MuTime at least once.");
         }
 
         long cachedSntpTime = _getCachedSntpTime();
@@ -70,8 +70,8 @@ public class TrueTime<InstanceType extends TrueTime> {
     }
 
     /**
-     * Cache TrueTime initialization information in SharedPreferences
-     * This can help avoid additional TrueTime initialization on app kills
+     * Cache MuTime initialization information in SharedPreferences
+     * This can help avoid additional MuTime initialization on app kills
      */
     public synchronized  InstanceType usingCache(Context context) {
         diskCacheClient = new DiskCacheClient(context);
@@ -131,7 +131,7 @@ public class TrueTime<InstanceType extends TrueTime> {
 
     synchronized static void saveTrueTimeInfoToDisk() {
         if (!SNTP_CLIENT.wasInitialized()) {
-            Log.w(TAG, "SNTP client not available; Not caching TrueTime info in disk");
+            Log.w(TAG, "SNTP client not available; Not caching MuTime info in disk");
             return;
         }
         diskCacheClient.cacheTrueTimeInfo(SNTP_CLIENT);

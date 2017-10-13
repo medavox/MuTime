@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.instacart.library.truetime;
+package com.medavox.library.mutime;
 
 import android.os.SystemClock;
 import android.util.Log;
@@ -162,18 +162,18 @@ public class SntpClient {
 
             final byte mode = (byte) (buffer[0] & 0x7);
             if (mode != 4 && mode != 5) {
-                throw new InvalidNtpResponseException("untrusted mode value for TrueTime: " + mode);
+                throw new InvalidNtpResponseException("untrusted mode value for MuTime: " + mode);
             }
 
             final int stratum = buffer[1] & 0xff;
             t[Response.INDEX_STRATUM] = stratum;
             if (stratum < 1 || stratum > 15) {
-                throw new InvalidNtpResponseException("untrusted stratum value for TrueTime: " + stratum);
+                throw new InvalidNtpResponseException("untrusted stratum value for MuTime: " + stratum);
             }
 
             final byte leap = (byte) ((buffer[0] >> 6) & 0x3);
             if (leap == 3) {
-                throw new InvalidNtpResponseException("unsynchronized server responded for TrueTime");
+                throw new InvalidNtpResponseException("unsynchronized server responded for MuTime");
             }
 
             double delay = Math.abs((responseTime - originateTime) - (transmitTime - receiveTime));

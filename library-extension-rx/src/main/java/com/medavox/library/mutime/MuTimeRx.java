@@ -1,4 +1,4 @@
-package com.instacart.library.truetime;
+package com.medavox.library.mutime;
 
 import android.util.Log;
 
@@ -24,24 +24,24 @@ import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.schedulers.Schedulers;
 
-public class TrueTimeRx extends TrueTime<TrueTimeRx> {
+public class MuTimeRx extends MuTime<MuTimeRx> {
 
-    private static final TrueTimeRx RX_INSTANCE = new TrueTimeRx();
-    private static final String TAG = TrueTimeRx.class.getSimpleName();
+    private static final MuTimeRx RX_INSTANCE = new MuTimeRx();
+    private static final String TAG = MuTimeRx.class.getSimpleName();
 
     private int _retryCount = 50;
 
-    public static TrueTimeRx getInstance() {
+    public static MuTimeRx getInstance() {
         return RX_INSTANCE;
     }
 
-    public TrueTimeRx withRetryCount(int retryCount) {
+    public MuTimeRx withRetryCount(int retryCount) {
         _retryCount = retryCount;
         return this;
     }
 
     /**
-     * Initialize TrueTime
+     * Initialize MuTime
      * See {@link #initializeNtp(String)} for details on working
      *
      * @return accurate NTP Date
@@ -56,7 +56,7 @@ public class TrueTimeRx extends TrueTime<TrueTimeRx> {
      }
 
     /**
-     * Initialize TrueTime
+     * Initialize MuTime
      * A single NTP pool server is provided.
      * Using DNS we resolve that to multiple IP hosts
      * (See {@link #initializeNtp(InetAddress...)} for manually resolved IPs)
@@ -76,7 +76,7 @@ public class TrueTimeRx extends TrueTime<TrueTimeRx> {
     }
 
     /**
-     * Initialize TrueTime
+     * Initialize MuTime
      * Use this if you want to resolve the NTP Pool address to individual IPs yourself
      *
      * See https://github.com/instacart/truetime-android/issues/42

@@ -1,18 +1,18 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.instacart.library.truetime">
+    package="com.medavox.library.mutime">
 
     <!--UDP permissions-->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
 
-    <!--Detect boot to invalidate TrueTime-->
+    <!--Detect boot to invalidate MuTime-->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application>
         <!-- Start the Service if applicable on boot -->
-        <receiver android:name=".BootCompletedBroadcastReceiver">
+        <receiver android:name="com.medavox.library.mutime.MuTimeBroadcastReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>

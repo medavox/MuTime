@@ -1,4 +1,4 @@
-package com.instacart.library.truetime;
+package com.medavox.library.mutime;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -86,7 +86,7 @@ class DiskCacheClient {
 
     private boolean sharedPreferencesUnavailable() {
         if (sharedPrefs == null) {
-            Log.e(TAG, "SharedPreferences was null; Cannot cache NTP offset for TrueTime. ");
+            Log.e(TAG, "SharedPreferences was null; Cannot cache NTP offset for MuTime. ");
             return true;
         }
         return false;
