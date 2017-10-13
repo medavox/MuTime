@@ -13,12 +13,12 @@ public class InvalidNtpResponseException
     InvalidNtpResponseException(String detailMessage) {
         super(detailMessage);
 
-        this.property = "na";
+        this.property = "n/a";
         this.expectedValue = 0F;
         this.actualValue = 0F;
     }
 
-  /**
+  /**Thrown when an NTP server sends back an invalid response
    *
    * @param message An informative message that api users can use to know what went wrong.
    *                should contain {@link #property}, {@link #expectedValue} and

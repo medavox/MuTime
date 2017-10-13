@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-public class BootCompletedBroadcastReceiver
+public class TrueTimeBroadcastReceiver
       extends BroadcastReceiver {
 
     private static final String TAG = "TrueTimeBroadcastReceiver";
@@ -15,12 +15,12 @@ public class BootCompletedBroadcastReceiver
         switch(intent.getAction()) {
             case Intent.ACTION_BOOT_COMPLETED:
                 Log.i(TAG, "clearing TrueTime disk cache as we've detected a boot");
-                TrueTime.clearCachedInfo(context);
+                TrueTime.clearCachedInfo();
                 break;
 
             case Intent.ACTION_TIME_CHANGED:
                 Log.i(TAG, "manual system clock change detected; clearing TrueTime disk cache");
-                TrueTime.clearCachedInfo(context);
+                TrueTime.clearCachedInfo();
         }
     }
 }

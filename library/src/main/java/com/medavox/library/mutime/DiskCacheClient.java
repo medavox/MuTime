@@ -5,11 +5,9 @@ import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.util.Log;
 
-import static android.content.Context.MODE_PRIVATE;
-
 class DiskCacheClient {
 
-    private static final String KEY_CACHED_SHARED_PREFS = "com.instacart.library.truetime.shared_preferences";
+    private static final String SHARED_PREFS_KEY = "com.instacart.library.truetime.shared_preferences";
     private static final String KEY_CACHED_BOOT_TIME = "com.instacart.library.truetime.cached_boot_time";
     private static final String KEY_CACHED_DEVICE_UPTIME = "com.instacart.library.truetime.cached_device_uptime";
     private static final String KEY_CACHED_SNTP_TIME = "com.instacart.library.truetime.cached_sntp_time";
@@ -18,16 +16,15 @@ class DiskCacheClient {
 
     private SharedPreferences sharedPrefs = null;
 
-    void enableDiskCaching(Context context) {
-        sharedPrefs = context.getSharedPreferences(KEY_CACHED_SHARED_PREFS, MODE_PRIVATE);
+    public DiskCacheClient(Context context) {
+        sharedPrefs = context.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
     }
 
-    void clearCachedInfo(Context context) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(KEY_CACHED_SHARED_PREFS, MODE_PRIVATE);
-        if (sharedPreferences == null) {
+    void clearCachedInfo() {
+        if (sharedPreferencesUnavailable()) {
             return;
         }
-        sharedPreferences.edit().clear().apply();
+        sharedPrefs.edit().clear().apply();
     }
 
     void cacheTrueTimeInfo(SntpClient sntpClient) {
@@ -40,7 +37,7 @@ class DiskCacheClient {
         long bootTime = cachedSntpTime - cachedDeviceUptime;
 
         Log.d(TAG,
-                  String.format("Caching true time info to disk sntp [%s] device [%s] boot [%s]",
+                  String.format("Caching true time info to disk: (sntp: [%s]; device: [%s]; boot: [%s])",
                                 cachedSntpTime,
                                 cachedDeviceUptime,
                                 bootTime));
@@ -89,7 +86,7 @@ class DiskCacheClient {
 
     private boolean sharedPreferencesUnavailable() {
         if (sharedPrefs == null) {
-            Log.w(TAG, "Cannot use disk caching strategy for TrueTime. SharedPreferences unavailable");
+            Log.e(TAG, "SharedPreferences was null; Cannot cache NTP offset for TrueTime. ");
             return true;
         }
         return false;
