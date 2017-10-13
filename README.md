@@ -14,13 +14,13 @@ In a [recent conference talk](https://vimeo.com/190922794), instacart explained 
 
 ## Reason For Fork
 
-I needed a way of providing reliable time for an app I'm working on, and although the NTP client implementation in [TrueTime](https://github.com/instacart/truetime-android)'s library is more sophisticated that Google's hidden Android [SntpClient](http://grepcode.com/file/repository.grepcode.com/java/ext/com.google.android/android/4.1.1_r1/android/net/SntpClient.java/), I needed even more reliable time-keeping for my use case. It was also apparent (at the time of forking) that [instacart](https://github.com/instacart)/[Kaushik Gopal](https://github.com/kaushikgopal)'s plans for future development (judging from [development branches](https://github.com/instacart/truetime-android/tree/kg/fix/sync_to_atomic) did not fit with my own needs.
+I needed a way of providing reliable time for an app I'm working on, and although the NTP client implementation in [TrueTime](https://github.com/instacart/truetime-android)'s library is more sophisticated that Google's hidden Android [SntpClient](http://grepcode.com/file/repository.grepcode.com/java/ext/com.google.android/android/4.1.1_r1/android/net/SntpClient.java/), I needed even more reliable time-keeping for my use case. It was also apparent (at the time of forking) that [instacart](https://github.com/instacart)/[Kaushik Gopal](https://github.com/kaushikgopal)'s plans for future development (judging from [development branches](https://github.com/instacart/truetime-android/tree/kg/fix/sync_to_atomic)) did not fit with my own needs.
 
 # How is the true time calculated?
 
-It's pretty simple actually. We make a request to an NTP server that gives us the actual time. We then establish the delta between device uptime and uptime at the time of the network response. Each time "now" is requested subsequently, we account for that offset and return a corrected `Date` object.
+It's pretty simple actually. We make a request to an NTP server that gives us the actual time. We then establish the delta between device uptime and uptime at the time of the network response. On each subsequent request for the true time "now", we compute the correct time from that offset.
 
-Also, once we have this information it's valid until the next time you boot your device. This means if you enable the disk caching feature, after a single successful NTP request you can use the information on disk directly without ever making another network request. This applies even across application kills which can happen frequently if your users have a memory starved device.
+Once we have this offset information, it's valid until the next time you boot your device. This means if you enable the disk caching feature, after a single successful NTP request you can use the information on disk directly without ever making another network request. This applies even across application kills which can happen frequently if your users have a memory starved device.
 
 # Installation
 
@@ -64,7 +64,7 @@ Date noReallyThisIsTheTrueDateAndTime = MuTime.now();
 
 ## Rx-ified Version
 
-If you're using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` api which takes in an NTP pool server host.
+If you're using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` method which takes an NTP pool server host.
 
 ```java
 MuTimeRx.build()
@@ -87,8 +87,8 @@ MuTimeRx.now(); // return a Date object with the "true" time.
 
 * Implements the full NTP, as opposed to the more basic SNTP (read: far more accurate time)
 * The NTP pool address you provide is resolved into multiple IP addresses
-* We query each IP multiple times, guarding against checks, and taking the best response
-* If any one of the requests fail, we retry that failed request (alone) for a specified number of times
+* We query each IP multiple times, guarding against checks, and take the best response
+* If any of the requests fail, we retry that failed request (alone) for a specified number of times
 * We collect all the responses and again filter for the best result as per the NTP spec
 
 ## Notes/tips:
@@ -100,7 +100,7 @@ MuTimeRx.now(); // return a Date object with the "true" time.
 
 ## Troubleshooting/Exception handling:
 
-When you execute the MuTime initialization, you are very highly likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
+When you execute the MuTime initialization, you are very likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
 
 ### Why does this happen?
 
@@ -150,8 +150,8 @@ Do also note, if MuTime fails to initialize (because of the above exception bein
 # License
 
 ```
+Original Work (c) Instacart/Kaushik Gopal 2016-2017
 
-Original Work 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
