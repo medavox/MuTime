@@ -1,22 +1,26 @@
-# TrueTime for Android
+# MuTime for Android
 
-![TrueTime](truetime.png "TrueTime for Android")
+![MuTime](truetime.png "MuTime for Android")
 
 NTP client for Android. Calculate the date and time "now" impervious to manual changes to device clock time.
 
 In certain applications it becomes important to get the real or "true" date and time. On most devices, if the clock has been changed manually, then a `new Date()` instance gives you a time impacted by local settings.
 
-Users may do this for a variety of reasons, like being in different timezones, trying to be punctual by setting their clocks 5 – 10 minutes early, etc. Your application or service may want a date that is unaffected by these changes and reliable as a source of truth. TrueTime gives you that.
+Users may do this for a variety of reasons, like being in different timezones, trying to be punctual by setting their clocks 5 – 10 minutes early, etc. Your application or service may want a date that is unaffected by these changes and reliable as a source of truth. MuTime gives you that.
 
-You can read more about the use case in our [blog post](https://tech.instacart.com/truetime/).
+You can read more about the use case in Instacart's [blog post](https://tech.instacart.com/truetime/).
 
-In a [recent conference talk](https://vimeo.com/190922794), we explained how the full NTP implementation works with Rx. Check the [video](https://vimeo.com/190922794) and [slides](https://speakerdeck.com/kaushikgopal/learning-rx-by-example-2?slide=31) out for implementation details.
+In a [recent conference talk](https://vimeo.com/190922794), instacart explained how the full NTP implementation works with Rx. Check the [video](https://vimeo.com/190922794) and [slides](https://speakerdeck.com/kaushikgopal/learning-rx-by-example-2?slide=31) out for implementation details.
 
-# How is TrueTime calculated?
+## Reason For Fork
 
-It's pretty simple actually. We make a request to an NTP server that gives us the actual time. We then establish the delta between device uptime and uptime at the time of the network response. Each time "now" is requested subsequently, we account for that offset and return a corrected `Date` object.
+I needed a way of providing reliable time for an app I'm working on, and although the NTP client implementation in [TrueTime](https://github.com/instacart/truetime-android)'s library is more sophisticated that Google's hidden Android [SntpClient](http://grepcode.com/file/repository.grepcode.com/java/ext/com.google.android/android/4.1.1_r1/android/net/SntpClient.java/), I needed even more reliable time-keeping for my use case. It was also apparent (at the time of forking) that [instacart](https://github.com/instacart)/[Kaushik Gopal](https://github.com/kaushikgopal)'s plans for future development (judging from [development branches](https://github.com/instacart/truetime-android/tree/kg/fix/sync_to_atomic)) did not fit with my own needs.
 
-Also, once we have this information it's valid until the next time you boot your device. This means if you enable the disk caching feature, after a single successful NTP request you can use the information on disk directly without ever making another network request. This applies even across application kills which can happen frequently if your users have a memory starved device.
+# How is the true time calculated?
+
+It's pretty simple actually. We make a request to an NTP server that gives us the actual time. We then establish the delta between device uptime and uptime at the time of the network response. On each subsequent request for the true time "now", we compute the correct time from that offset.
+
+Once we have this offset information, it's valid until the next time you boot your device. This means if you enable the disk caching feature, after a single successful NTP request you can use the information on disk directly without ever making another network request. This applies even across application kills which can happen frequently if your users have a memory starved device.
 
 # Installation
 
@@ -33,10 +37,10 @@ repositories {
 
 dependencies {
     // ...
-    compile 'com.github.instacart.truetime-android:library-extension-rx:<release-version>'
+    compile 'com.github.medavox.mutime:library-extension-rx:<release-version>'
 
     // or if you want the vanilla version of Truetime:
-    compile 'com.github.instacart.truetime-android:library:<release-version>'
+    compile 'com.github.medavox.mutime:library:<release-version>'
 }
 ```
 
@@ -44,10 +48,10 @@ dependencies {
 
 ## Vanilla version
 
-Importing `'com.github.instacart.truetime-android:library:<release-version>'` should be sufficient for this.
+Importing `'com.github.medavox.mutime:library:<release-version>'` should be sufficient for this.
 
 ```java
-TrueTime.build().initialize();
+MuTime.build().initialize();
 ```
 
 `initialize` must be run on a background thread. If you run it on the main thread, you will get a [`NetworkOnMainThreadException`](https://developer.android.com/reference/android/os/NetworkOnMainThreadException.html)
@@ -55,19 +59,19 @@ TrueTime.build().initialize();
 You can then use:
 
 ```java
-Date noReallyThisIsTheTrueDateAndTime = TrueTime.now();
+Date noReallyThisIsTheTrueDateAndTime = MuTime.now();
 ```
 
 ## Rx-ified Version
 
-If you're using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` api which takes in an NTP pool server host.
+If you're using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` method which takes an NTP pool server host.
 
 ```java
-TrueTimeRx.build()
+MuTimeRx.build()
         .initializeRx("time.google.com")
         .subscribeOn(Schedulers.io())
         .subscribe(date -> {
-            Log.v(TAG, "TrueTime was initialized and we have a time: " + date);
+            Log.v(TAG, "MuTime was initialized and we have a time: " + date);
         }, throwable -> {
             throwable.printStackTrace();
         });
@@ -76,27 +80,27 @@ TrueTimeRx.build()
 Now, as before:
 
 ```java
-TrueTimeRx.now(); // return a Date object with the "true" time.
+MuTimeRx.now(); // return a Date object with the "true" time.
 ```
 
 ### What is nifty about the Rx version?
 
 * Implements the full NTP, as opposed to the more basic SNTP (read: far more accurate time)
 * The NTP pool address you provide is resolved into multiple IP addresses
-* We query each IP multiple times, guarding against checks, and taking the best response
-* If any one of the requests fail, we retry that failed request (alone) for a specified number of times
+* We query each IP multiple times, guarding against checks, and take the best response
+* If any of the requests fail, we retry that failed request (alone) for a specified number of times
 * We collect all the responses and again filter for the best result as per the NTP spec
 
 ## Notes/tips:
 
-* Each `initialize` call makes an SNTP network request. TrueTime needs to be `initialize`d only once per device boot, if you use TrueTime's `withSharedPreferences` option to cache retrieved time-offset values and avoid repeated network requests.
-* Preferably use dependency injection (like [Dagger](http://square.github.io/dagger/)) and create a TrueTime @Singleton object
+* Each `initialize` call makes an SNTP network request. MuTime needs to be `initialize`d only once per device boot, if you use MuTime's `withSharedPreferences` option to cache retrieved time-offset values and avoid repeated network requests.
+* Preferably use dependency injection (like [Dagger](http://square.github.io/dagger/)) and create a MuTime @Singleton object
 * You can read up on Wikipedia the differences between [SNTP](https://en.wikipedia.org/wiki/Network_Time_Protocol#SNTP) and [NTP](https://www.meinbergglobal.com/english/faq/faq_37.htm).
-* TrueTime is also [available for iOS/Swift](https://github.com/instacart/truetime.swift)
+* MuTime is also [available for iOS/Swift](https://github.com/instacart/truetime.swift)
 
 ## Troubleshooting/Exception handling:
 
-When you execute the TrueTime initialization, you are very highly likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
+When you execute the MuTime initialization, you are very likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
 
 ### Why does this happen?
 
@@ -126,7 +130,7 @@ Or if you want the library to just handle that, use the Rx-ified version of the 
     compile 'com.github.instacart.truetime-android:library-extension-rx:<release-version>'
 ```
 
-With TrueTimeRx, we go the whole nine yards and implement the complete NTP Spec.
+With MuTimeRx, we go the whole nine yards and implement the complete NTP Spec.
 
 We:-
 
@@ -137,15 +141,17 @@ We:-
 * filter the best response,
 * and persist that to disk.
 
-If you don't use TrueTimeRx, you don't get these benefits.
+If you don't use MuTimeRx, you don't get these benefits.
 
-We welcome PRs for folks who wish to replicate the functionality in the vanilla TrueTime version. _We don't have plans of re-implementing that functionality atm_ in the vanilla/simple version of TrueTime.
+We welcome PRs for folks who wish to replicate the functionality in the vanilla MuTime version. _We don't have plans of re-implementing that functionality atm_ in the vanilla/simple version of MuTime.
 
-Do also note, if TrueTime fails to initialize (because of the above exception being thrown), then an `IllegalStateException` is thrown if you try to request an actual date via `TrueTime.now()`.
+Do also note, if MuTime fails to initialize (because of the above exception being thrown), then an `IllegalStateException` is thrown if you try to request an actual date via `MuTime.now()`.
 
 # License
 
 ```
+Original Work (c) Instacart/Kaushik Gopal 2016-2017
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
