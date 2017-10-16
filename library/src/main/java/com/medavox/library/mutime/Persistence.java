@@ -65,10 +65,17 @@ class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseLi
     //todo
     @Override
     public void onReceive(Context context, Intent intent) {
+        TimeData old = getTimeData();
         switch(intent.getAction()) {
             case Intent.ACTION_BOOT_COMPLETED:
                 //uptime can no longer be trusted
 
+                long newTrustedUptimeAtSntpTime =
+                        SystemClock.elapsedRealtime() - (System.currentTimeMillis() - old.getSystemClockAtSntpTime());
+                TimeData fixedUptime = new TimeData.Builder(old)
+                        .systemClockAtSntpTime(newTrustedUptimeAtSntpTime)
+                        .build();
+                onSntpTimeData(fixedUptime);
 
                 break;
 
@@ -84,17 +91,15 @@ class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseLi
                 * THAT is the new systemclock time as of the sntp response
                 */
 
-                TimeData old = getTimeData();
                 long newTrustedSystemClockAtSntpTime =
             System.currentTimeMillis() - (SystemClock.elapsedRealtime() - old.getUptimeAtSntpTime());
-                TimeData newTimeData = new TimeData.Builder(old)
+                TimeData fixedSystemClockTime = new TimeData.Builder(old)
                         .systemClockAtSntpTime(newTrustedSystemClockAtSntpTime)
                         .build();
-                onSntpTimeData(newTimeData);
+                onSntpTimeData(fixedSystemClockTime);
         }
         try {
-            Log.i(TAG, "action \""+intent.getAction()+"\" detected. True time is nowAsDate:"
-                    +MuTime.getInstance().nowAsDate());
+            Log.i(TAG, "action \""+intent.getAction()+"\" detected. Repairing offset info...");
         }catch(Exception e) {
 
         }

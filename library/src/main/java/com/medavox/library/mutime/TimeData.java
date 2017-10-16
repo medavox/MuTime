@@ -5,7 +5,6 @@ package com.medavox.library.mutime;
  */
 
 class TimeData {
-
     private long sntpTime;
     private long uptimeAtSntpTime;
     private long systemClockAtSntpTime;

@@ -66,10 +66,9 @@ public class MuTime<InstanceType extends MuTime> {
             3. We have no/invalid SNTP data,
              and don't know the correct time until we make a network request
 */
-        if(persistence == null)
-        TimeData timeData = persistence.getTimeData();
+        TimeData timeData = persistence.getTimeData();//throws NullPointerException
         if(timeData == null) {
-            throw new Exception("time data is missing or invalid. " +
+            throw new MissingTimeDataException("time data is missing or invalid. " +
                     "Please make an NTP network request to refresh the true time");
         }
 
