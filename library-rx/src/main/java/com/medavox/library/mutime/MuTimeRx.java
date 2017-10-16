@@ -28,13 +28,20 @@ import io.reactivex.schedulers.Schedulers;
 
 public class MuTimeRx extends MuTime<MuTimeRx> {
 
-    private static final MuTimeRx RX_INSTANCE = new MuTimeRx();
+    private static MuTimeRx RX_INSTANCE;
     private static final String TAG = MuTimeRx.class.getSimpleName();
 
     private int _retryCount = 50;
 
-    public static MuTimeRx getInstance() {
+    public static MuTimeRx getInstance(Persistence p) {
+        if(RX_INSTANCE == null) {
+            RX_INSTANCE = new MuTimeRx(p);
+        }
         return RX_INSTANCE;
+    }
+
+    protected MuTimeRx(Persistence p) {
+        super(p);
     }
 
     public MuTimeRx withRetryCount(int retryCount) {
@@ -51,7 +58,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
         return initializeNtp(ntpPoolAddress).map(new Function<long[], Date>() {
             @Override
             public Date apply(long[] longs) throws Exception {
-                return now();
+                return nowAsDate();
             }
         });
      }
@@ -169,9 +176,9 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
                                         throws Exception {
 
                                         Log.d(TAG,
-                                            "---- requestTime from: " + singleIpHostAddress);
+                                            "---- requestTimeFromServer from: " + singleIpHostAddress);
                                         try {
-                                            o.onNext(requestTime(singleIpHostAddress));
+                                            o.onNext(requestTimeFromServer(singleIpHostAddress));
                                             o.onComplete();
                                         } catch (IOException e) {
                                             if (!o.isCancelled()) {

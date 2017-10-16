@@ -28,7 +28,7 @@ import java.net.InetAddress;
 /**
  * Simple SNTP client class for retrieving network time.
  */
-public class SntpClient {
+class SntpClient {
     private static final String TAG = SntpClient.class.getSimpleName();
 
     private static final class Response {
@@ -80,7 +80,7 @@ public class SntpClient {
     public static TimeData fromLongArray(long[] t) {
         return new TimeData.Builder()
                 .sntpTime(t[Response.INDEX_RESPONSE_TIME] + calcClockOffset(t))
-                .systemClockAtSntpTime(t[Response.INDEX_RESPONSE_TICKS])
+                .uptimeAtSntpTime(t[Response.INDEX_RESPONSE_TICKS])
                 .systemClockAtSntpTime(System.currentTimeMillis() -
                         (SystemClock.elapsedRealtime() - t[Response.INDEX_RESPONSE_TICKS]))
                 .build();
@@ -98,7 +98,7 @@ public class SntpClient {
         int serverResponseDelayMax,
         int timeout,
         SntpResponseListener listener) throws IOException {
-
+        Log.d(TAG, "requesting the time from "+ntpHost+"...");
         DatagramSocket socket = null;
 
         try {
@@ -205,7 +205,8 @@ public class SntpClient {
             Log.i(TAG, "---- SNTP successful response from " + ntpHost);
             return t;
         } catch (Exception e) {
-            Log.e(TAG, "SNTP request failed for " + ntpHost+": "+e.getLocalizedMessage());
+            Log.e(TAG, "SNTP request failed for " + ntpHost+": "+e);
+            e.printStackTrace();
             throw e;
         } finally {
             if (socket != null) {

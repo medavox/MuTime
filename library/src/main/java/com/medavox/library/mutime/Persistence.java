@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.SystemClock;
 import android.util.Log;
 
 /**Handles caching of offsets to disk using {@link SharedPreferences},
@@ -11,31 +12,54 @@ import android.util.Log;
  * Register this class as a broadcast receiver for {@link Intent#ACTION_BOOT_COMPLETED BOOT_COMPLETED}
  * and {@link Intent#ACTION_TIME_CHANGED TIME_CHANGED},
  * to allow MuTime to correct its offsets against these events.*/
-public class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseListener {
-//todo: this class now keeps both the in-memory copy of the time data, plus
+class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseListener {
+//todo: this class nowAsDate keeps both the in-memory copy of the time data, plus
 //todo: arbitrates access to the SharedPrefs copy, all under one API.
     //all the API user has to do is ask for the data,
     //and persistence will give them in the in-memory copy if it has any,
 // retrieves it from shared preferences,
     //or finally makes a network request
     private static final String SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences";
-    private static final String KEY_CACHED_BOOT_TIME = "cached_boot_time";
-    private static final String KEY_CACHED_DEVICE_UPTIME = "cached_device_uptime";
-    private static final String KEY_CACHED_SNTP_TIME = "cached_sntp_time";
+    private static final String KEY_SYSTEM_CLOCK_TIME = "cached_system_clock_time";
+    private static final String KEY_DEVICE_UPTIME = "cached_device_uptime";
+    private static final String KEY_SNTP_TIME = "cached_sntp_time";
 
     private static final String TAG = Persistence.class.getSimpleName();
 
-    private SharedPreferences sharedPrefs = null;
+    private static SharedPreferences sharedPrefs = null;
 
     private static TimeData sntpResponse = null;
 
     public Persistence(Context context) {
         sharedPrefs = context.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
+        Log.i(TAG, "instance:"+this);
     }
 
     /**Can be null*/
-    public static TimeData getSntpTimeData() {
-        return sntpResponse;
+    public TimeData getTimeData() {
+        if (sntpResponse != null) {
+            return sntpResponse;
+        }
+        else {
+            Log.i(TAG, "no time data in-memory, checking SharedPreferences...");
+            //Log.i(TAG, "is SharedPrefs null:"+(sharedPrefs == null));
+            long sntpTime = sharedPrefs.getLong(KEY_SNTP_TIME, -1);
+            long upTime = sharedPrefs.getLong(KEY_DEVICE_UPTIME, -1);
+            long clockTime = sharedPrefs.getLong(KEY_SYSTEM_CLOCK_TIME, -1);
+
+            if(sntpTime == -1 || upTime == -1 || clockTime == -1) {
+                return null;
+            }
+            return new TimeData.Builder()
+                    .sntpTime(sntpTime)
+                    .uptimeAtSntpTime(upTime)
+                    .systemClockAtSntpTime(clockTime)
+                    .build();
+        }
+    }
+
+    public boolean hasTimeData() {
+        return getTimeData() != null;
     }
 
     //todo
@@ -43,76 +67,62 @@ public class Persistence extends BroadcastReceiver implements SntpClient.SntpRes
     public void onReceive(Context context, Intent intent) {
         switch(intent.getAction()) {
             case Intent.ACTION_BOOT_COMPLETED:
-                Log.i(TAG, "clearing MuTime disk cache as we've detected a boot");
-                clearCachedInfo();
+                //uptime can no longer be trusted
+
+
                 break;
 
             case Intent.ACTION_TIME_CHANGED:
-                Log.i(TAG, "manual system clock change detected; clearing MuTime disk cache");
-                clearCachedInfo();
+                //system clock can no longer be trusted
+                /*so if the uptime was x at a KNOWN true time,
+                * and we know the uptime is y nowAsDate,
+                * then we know it's been z since the known true time.
+                *
+                * get the new system clock value as of nowAsDate (w),
+                * then subtract z from it.
+                *
+                * THAT is the new systemclock time as of the sntp response
+                */
+
+                TimeData old = getTimeData();
+                long newTrustedSystemClockAtSntpTime =
+            System.currentTimeMillis() - (SystemClock.elapsedRealtime() - old.getUptimeAtSntpTime());
+                TimeData newTimeData = new TimeData.Builder(old)
+                        .systemClockAtSntpTime(newTrustedSystemClockAtSntpTime)
+                        .build();
+                onSntpTimeData(newTimeData);
+        }
+        try {
+            Log.i(TAG, "action \""+intent.getAction()+"\" detected. True time is nowAsDate:"
+                    +MuTime.getInstance().nowAsDate());
+        }catch(Exception e) {
+
         }
     }
 
     @Override
     public void onSntpTimeData(TimeData data) {
         sntpResponse = data;
-        saveTrueTimeInfoToDisk(data);
-    }
 
-    private void saveTrueTimeInfoToDisk(TimeData data) {
         if (sharedPreferencesUnavailable()) {
             return;
         }
 
-        long sntpTime = data.getSntpTime();
-        long deviceUptime = data.getUptimeAtSntpTime();
-        long bootTime = sntpTime - deviceUptime;
+        //long bootTime = sntpTime - deviceUptime;
 
-        Log.d(TAG, String.format("Caching true time info to disk: " +
-                                  "(sntp: [%s]; device: [%s]; boot: [%s])",
-                                sntpTime,
-                                deviceUptime,
-                                bootTime));
+        Log.d(TAG, String.format("Saving true time info to disk: " +
+                                  "(sntp: [%s]; device: [%s]; clock: [%s])",
+                data.getSntpTime(),
+                data.getUptimeAtSntpTime(),
+                data.getSystemClockAtSntpTime()));
 
         SharedPreferences.Editor editor = sharedPrefs.edit();
-        editor.putLong(KEY_CACHED_BOOT_TIME, bootTime);
-        editor.putLong(KEY_CACHED_DEVICE_UPTIME, deviceUptime);
-        editor.putLong(KEY_CACHED_SNTP_TIME, sntpTime);
+        editor.putLong(KEY_SYSTEM_CLOCK_TIME, data.getSystemClockAtSntpTime());
+        editor.putLong(KEY_DEVICE_UPTIME, data.getUptimeAtSntpTime());
+        editor.putLong(KEY_SNTP_TIME, data.getSntpTime());
         editor.apply();
     }
-/*
-    boolean isTrueTimeCachedFromAPreviousBoot() {
-        if (sharedPreferencesUnavailable()) {
-            return false;
-        }
 
-        long cachedBootTime = sharedPrefs.getLong(KEY_CACHED_BOOT_TIME, 0L);
-        if (cachedBootTime == 0) {
-            return false;
-        }
-
-        // has boot time changed (simple check)
-        boolean bootTimeChanged = SystemClock.elapsedRealtime() < getCachedDeviceUptime();
-        Log.i(TAG, "---- boot time changed " + bootTimeChanged);
-        return !bootTimeChanged;
-    }
-
-    long getCachedDeviceUptime() {
-        if (sharedPreferencesUnavailable()) {
-            return 0L;
-        }
-
-        return sharedPrefs.getLong(KEY_CACHED_DEVICE_UPTIME, 0L);
-    }
-
-    long getCachedSntpTime() {
-        if (sharedPreferencesUnavailable()) {
-            return 0L;
-        }
-
-        return sharedPrefs.getLong(KEY_CACHED_SNTP_TIME, 0L);
-    }
-*/
     // -----------------------------------------------------------------------------------
 
     private void clearCachedInfo() {

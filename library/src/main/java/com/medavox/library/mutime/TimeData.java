@@ -4,7 +4,7 @@ package com.medavox.library.mutime;
  * Created by Adam Howard on 16/10/17.
  */
 
-public class TimeData {
+class TimeData {
 
     private long sntpTime;
     private long uptimeAtSntpTime;
@@ -50,6 +50,16 @@ public class TimeData {
         private long uptimeAtSntpTime;
         private long systemClockAtSntpTime;
 
+        public Builder() {
+
+        }
+
+        public Builder(TimeData existing) {
+            sntpTime = existing.getSntpTime();
+            uptimeAtSntpTime = existing.getUptimeAtSntpTime();
+            systemClockAtSntpTime = existing.getSystemClockAtSntpTime();
+        }
+
         public Builder sntpTime(long time) {
             sntpTime = time;
             return this;
@@ -76,5 +86,4 @@ public class TimeData {
             }
         }
     }
-
 }

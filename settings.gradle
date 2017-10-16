@@ -1,1 +1,1 @@
-include ':library', ':library-extension-rx'
+include ':library', ':library-rx', ':myapplication'
