@@ -42,8 +42,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
         return this;
     }
 
-    /**
-     * Initialize MuTime
+    /**Initialize MuTime
      * See {@link #initializeNtp(String)} for details on working
      *
      * @return accurate NTP Date
@@ -57,8 +56,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
         });
      }
 
-    /**
-     * Initialize MuTime
+    /**Initialize MuTime
      * A single NTP pool server is provided.
      * Using DNS we resolve that to multiple IP hosts
      * (See {@link #initializeNtp(InetAddress...)} for manually resolved IPs)
@@ -77,8 +75,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
               .compose(performNtpAlgorithm);
     }
 
-    /**
-     * Initialize MuTime
+    /**Initialize MuTime
      * Use this if you want to resolve the NTP Pool address to individual IPs yourself
      *
      * See https://github.com/instacart/truetime-android/issues/42
@@ -93,8 +90,9 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
                .compose(performNtpAlgorithm);
     }
 
-    /**
-     * Transformer that takes in a pool of NTP addresses
+    //----------------------------------------------------------------------------------------
+
+    /**Transformer that takes in a pool of NTP addresses
      * Against each IP host we issue a UDP call and retrieve the best response using the NTP algorithm
      */
     private FlowableTransformer<InetAddress, long[]> performNtpAlgorithm
@@ -122,8 +120,8 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
                   .doOnNext(new Consumer<long[]>() {
                       @Override
                       public void accept(long[] ntpResponse) {
-                          cacheTrueTimeInfo(ntpResponse);
-                          saveTrueTimeInfoToDisk();
+                          //SNTP_CLIENT.storeTimeOffset(ntpResponse);
+                          persistence.onSntpTimeData(SNTP_CLIENT.fromLongArray(ntpResponse));
                       }
                   });
         }
@@ -206,8 +204,8 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
             Collections.sort(responseTimeList, new Comparator<long[]>() {
                 @Override
                 public int compare(long[] lhsParam, long[] rhsLongParam) {
-                    long lhs = SntpClient.getRoundTripDelay(lhsParam);
-                    long rhs = SntpClient.getRoundTripDelay(rhsLongParam);
+                    long lhs = SntpClient.calcRoundTripDelay(lhsParam);
+                    long rhs = SntpClient.calcRoundTripDelay(rhsLongParam);
                     return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
                 }
             });
@@ -225,8 +223,8 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
             Collections.sort(bestResponses, new Comparator<long[]>() {
                 @Override
                 public int compare(long[] lhsParam, long[] rhsParam) {
-                    long lhs = SntpClient.getClockOffset(lhsParam);
-                    long rhs = SntpClient.getClockOffset(rhsParam);
+                    long lhs = SntpClient.calcClockOffset(lhsParam);
+                    long rhs = SntpClient.calcClockOffset(rhsParam);
                     return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
                 }
             });

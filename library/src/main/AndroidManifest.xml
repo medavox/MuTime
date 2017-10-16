@@ -12,7 +12,7 @@
 
     <application>
         <!-- Start the Service if applicable on boot -->
-        <receiver android:name="com.medavox.library.mutime.MuTimeBroadcastReceiver">
+        <receiver android:name="com.medavox.library.mutime.Persistence">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>

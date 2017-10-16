@@ -32,4 +32,4 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-group='com.github.instacart'
+group='com.github.medavox'

@@ -9,72 +9,65 @@ import java.util.Date;
 import java.util.Locale;
 
 public class MuTime<InstanceType extends MuTime> {
-
-    private static final String TAG = MuTime.class.getSimpleName();
+    protected static Persistence persistence;
+    protected static final SntpClient SNTP_CLIENT = new SntpClient();
 
     private static final MuTime INSTANCE = new MuTime();
-    private static DiskCacheClient diskCacheClient;
-    private static final SntpClient SNTP_CLIENT = new SntpClient();
-
     private static float _rootDelayMax = 100;
     private static float _rootDispersionMax = 100;
     private static int _serverResponseDelayMax = 200;
     private static int _udpSocketTimeoutInMillis = 30_000;
-
-    private String _ntpHost = "1.us.pool.ntp.org";
+    private static final String TAG = MuTime.class.getSimpleName();
 
     public static MuTime getInstance() {
         return INSTANCE;
     }
 
-    public void initialize() throws IOException {
-        initialize(_ntpHost);
-        saveTrueTimeInfoToDisk();
-    }
-
-    protected void initialize(String ntpHost) throws IOException {
-        if (isInitialized()) {
-            Log.w(TAG, "MuTime already initialized from previous boot/init");
-            return;
-        }
-
-        requestTime(ntpHost);
-    }
-
-    public static boolean isInitialized() {
-        return SNTP_CLIENT.wasInitialized() || diskCacheClient.isTrueTimeCachedFromAPreviousBoot();
+    /**Call this at least once to get reliable time from an NTP server.*/
+    public long[] requestTime(String ntpHost) throws IOException {
+        return SNTP_CLIENT.requestTime(ntpHost,
+                _rootDelayMax,
+                _rootDispersionMax,
+                _serverResponseDelayMax,
+                _udpSocketTimeoutInMillis,
+                persistence);
     }
 
     /**Get the True Time as a {@link Date}
      * @return Date object that returns the current time in the default Timezone
      */
-    public static Date now() {
-        return new Date(nowLong());
+    public static Date now() throws Exception {
+        return new Date(nowAsLong());
     }
 
-    /**Get the True Time in Unix Epoch format, milliseconds since 0:00 on 1 January, 1970.*/
-    public static long nowLong() {
-        if (!isInitialized()) {
-            throw new IllegalStateException("You need to call init() on MuTime at least once.");
+    /**Get the True Time in Unix Epoch format: milliseconds since midnight on 1 January, 1970.*/
+    public static long nowAsLong() throws Exception {
+        /*3 possible states:
+            1. We have fresh SNTP data from a recently-made request, store (atm) in SntpClient
+            2. We have cached SNTP data from SharedPreferences
+            3. We have no/invalid SNTP data,
+             and don't know the correct time until we make a network request
+*/
+
+        TimeData timeData = Persistence.getSntpTimeData();
+        if(timeData == null) {
+            throw new Exception("time data is missing or invalid. " +
+                    "Please make an NTP network request to refresh the true time");
         }
 
-        long cachedSntpTime = _getCachedSntpTime();
-        long cachedDeviceUptime = _getCachedDeviceUptime();
-        long deviceUptime = SystemClock.elapsedRealtime();
 
-        return cachedSntpTime + (deviceUptime - cachedDeviceUptime);
-    }
+        long cachedSntpTime = timeData.getSntpTime();
+        long cachedDeviceUptime = timeData.getUptimeAtSntpTime();
 
-    public static void clearCachedInfo() {
-        diskCacheClient.clearCachedInfo();
+        return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
     }
 
     /**
      * Cache MuTime initialization information in SharedPreferences
      * This can help avoid additional MuTime initialization on app kills
      */
-    public synchronized  InstanceType usingCache(Context context) {
-        diskCacheClient = new DiskCacheClient(context);
+    public synchronized  InstanceType withDiskCache(Context context) {
+        persistence = new Persistence(context);
         return (InstanceType)this;
     }
 
@@ -111,58 +104,4 @@ public class MuTime<InstanceType extends MuTime> {
         _serverResponseDelayMax = serverResponseDelayInMillis;
         return (InstanceType)this;
     }
-
-    /**Specify the NTP host to query.
-     * @param ntpHost an ntp host address, in the format time.example.com*/
-    public synchronized InstanceType withNtpHost(String ntpHost) {
-        _ntpHost = ntpHost;
-        return (InstanceType)this;
-    }
-
-    // -----------------------------------------------------------------------------------
-
-    long[] requestTime(String ntpHost) throws IOException {
-        return SNTP_CLIENT.requestTime(ntpHost,
-            _rootDelayMax,
-            _rootDispersionMax,
-            _serverResponseDelayMax,
-            _udpSocketTimeoutInMillis);
-    }
-
-    synchronized static void saveTrueTimeInfoToDisk() {
-        if (!SNTP_CLIENT.wasInitialized()) {
-            Log.w(TAG, "SNTP client not available; Not caching MuTime info in disk");
-            return;
-        }
-        diskCacheClient.cacheTrueTimeInfo(SNTP_CLIENT);
-    }
-
-    void cacheTrueTimeInfo(long[] response) {
-        SNTP_CLIENT.cacheTrueTimeInfo(response);
-    }
-
-    private static long _getCachedDeviceUptime() {
-        long cachedDeviceUptime = SNTP_CLIENT.wasInitialized()
-                                  ? SNTP_CLIENT.getCachedDeviceUptime()
-                                  : diskCacheClient.getCachedDeviceUptime();
-
-        if (cachedDeviceUptime == 0L) {
-            throw new RuntimeException("Couldn't find cached device time from last boot");
-        }
-
-        return cachedDeviceUptime;
-    }
-
-    private static long _getCachedSntpTime() {
-        long cachedSntpTime = SNTP_CLIENT.wasInitialized()
-                              ? SNTP_CLIENT.getCachedSntpTime()
-                              : diskCacheClient.getCachedSntpTime();
-
-        if (cachedSntpTime == 0L) {
-            throw new RuntimeException("Couldn't find cached SNTP time from last boot");
-        }
-
-        return cachedSntpTime;
-    }
-
 }
