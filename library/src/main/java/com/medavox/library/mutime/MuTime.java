@@ -1,11 +1,11 @@
 package com.medavox.library.mutime;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.util.Log;
-
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.Date;
@@ -76,6 +76,13 @@ public class MuTime<InstanceType extends MuTime> {
         long cachedDeviceUptime = timeData.getUptimeAtSntpTime();
 
         return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
+    }
+
+    public void addDataRepairer(Context c) {
+        IntentFilter phil = new IntentFilter();
+        phil.addAction(Intent.ACTION_BOOT_COMPLETED);
+        phil.addAction(Intent.ACTION_TIME_CHANGED);
+        c.registerReceiver(persistence, phil);
     }
 
     /**
