@@ -1,24 +1,17 @@
 package com.medavox.library.mutime;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.util.Log;
 
 /**Handles caching of offsets to disk using {@link SharedPreferences},
- * and listening for device reboots and clock changes by the user.
- * Register this class as a broadcast receiver for {@link Intent#ACTION_BOOT_COMPLETED BOOT_COMPLETED}
- * and {@link Intent#ACTION_TIME_CHANGED TIME_CHANGED},
- * to allow MuTime to correct its offsets against these events.
  *
- * This class now keeps both the in-memory copy of the time data, plus
+ * This class keeps both an in-memory copy of the time data, plus
  * arbitrates access to the SharedPrefs copy, all under one API.
  * all the API user has to do is call {@link #getTimeData()}.
  * */
-class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseListener {
+final class Persistence implements SntpClient.SntpResponseListener {
     private static final String SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences";
     private static final String KEY_SYSTEM_CLOCK_TIME = "cached_system_clock_time";
     private static final String KEY_DEVICE_UPTIME = "cached_device_uptime";
@@ -55,82 +48,49 @@ class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseLi
                 return null;
             }
             //copy the SharedPreferences data into the in-memory variables
-            sntpResponse = new TimeData.Builder()
+            timeData = new TimeData.Builder()
                     .sntpTime(sntpTime)
                     .uptimeAtSntpTime(upTime)
                     .systemClockAtSntpTime(clockTime)
                     .build();
         }
-        //TODO:check that the difference between the the uptime and system clock timestamps
+
+        //check that the difference between the the uptime and system clock timestamps
         //is the same in the TimeData and right now
         //(this checks to make sure the data is still valid)
+        long differenceBetweenStoredClocks = timeData.getSystemClockAtSntpTime() - timeData.getUptimeAtSntpTime();
+        long differenceBetweenLiveClocks = System.currentTimeMillis() - SystemClock.elapsedRealtime();
 
+        if(Math.abs(differenceBetweenStoredClocks - differenceBetweenLiveClocks) > 10/*milliseconds*/) {
+            Log.e(TAG, "Time Data was found to be invalid when checked! " +
+                    "A fresh network request is required to compute the correct time.");
+            //clear the invalid data
+            timeData = null;
+            SharedPreferences.Editor e = sharedPrefs.edit();
+            e.remove(KEY_SNTP_TIME);
+            e.remove(KEY_SYSTEM_CLOCK_TIME);
+            e.remove(KEY_DEVICE_UPTIME);
+            e.apply();
+        }
 
-        return sntpResponse;
+        return timeData;
     }
-    /**Whether this library has any time data to */
+    /**Whether this class has any time data to give*/
     public boolean hasTimeData() {
         return getTimeData() != null;
     }
 
-    /**Detects when one of the time stamps have been invalidated by user actions, 
-     * and repairs it using the intact timestamp
-     * 
-     * <p>
-     * 
-     * If the user changes the system clock manually, 
-     * then the uptime timestamp is used to calculate a new vlaue for the system clock time stamp.
-     * 
-     * */
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        TimeData old = getTimeData();
-        Log.i(TAG, "action \""+intent.getAction()+"\" detected. Repairing TimeData...");
-        switch(intent.getAction()) {
-            case Intent.ACTION_BOOT_COMPLETED:
-                //uptime can no longer be trusted
-
-                long newTrustedUptimeAtSntpTime =
-                        SystemClock.elapsedRealtime() - (System.currentTimeMillis() - old.getSystemClockAtSntpTime());
-                TimeData fixedUptime = new TimeData.Builder(old)
-                        .systemClockAtSntpTime(newTrustedUptimeAtSntpTime)
-                        .build();
-                onSntpTimeData(fixedUptime);
-
-                break;
-
-            case Intent.ACTION_TIME_CHANGED:
-                //system clock can no longer be trusted
-                /*so if the uptime was x at a KNOWN true time,
-                * and we know the uptime is y nowAsDate,
-                * then we know it's been z since the known true time.
-                *
-                * get the new system clock value as of now (w),
-                * then subtract z from it.
-                *
-                * THAT is the new systemclock time as of the sntp response
-                */
-
-                long newTrustedSystemClockAtSntpTime =
-            System.currentTimeMillis() - (SystemClock.elapsedRealtime() - old.getUptimeAtSntpTime());
-                TimeData fixedSystemClockTime = new TimeData.Builder(old)
-                        .systemClockAtSntpTime(newTrustedSystemClockAtSntpTime)
-                        .build();
-                onSntpTimeData(fixedSystemClockTime);
-        }
-    }
 
     /**Saves the received {@link TimeData}, both locally as instance variables,
      * and into SharedPreferences.*/
     @Override
     public void onSntpTimeData(TimeData data) {
-        sntpResponse = data;
+        Log.d(TAG, "got time info:"+data);
+        timeData = data;
 
         if (sharedPreferencesUnavailable()) {
             return;
         }
-
-        //long bootTime = sntpTime - deviceUptime;
 
         Log.d(TAG, String.format("Saving true time info to disk: " +
                                   "(sntp: [%s]; device: [%s]; clock: [%s])",

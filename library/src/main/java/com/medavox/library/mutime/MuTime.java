@@ -7,7 +7,6 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.Locale;
 
 /**Base class for accessing the MuTime API.
@@ -29,7 +28,6 @@ import java.util.Locale;
  * catch (Exception e) {
  *     Log.e("MuTime", "failed to get the actual time:+e.getMessage());
  * }
- *
  * }</pre>*/
 public class MuTime<InstanceType extends MuTime> {
     protected static Persistence persistence;
@@ -41,6 +39,8 @@ public class MuTime<InstanceType extends MuTime> {
     private static int _serverResponseDelayMax = 200;
     private static int _udpSocketTimeoutInMillis = 30_000;
     private static final String TAG = MuTime.class.getSimpleName();
+
+    private TimeDataPreserver preserver = null;
 
     public static MuTime getInstance(Context c) {
         if(persistence == null) {
@@ -125,14 +125,31 @@ public class MuTime<InstanceType extends MuTime> {
         return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
     }
 
-    /**Adds a {@link android.content.BroadcastReceiver} which listens for thew user changing the clock,
-     * or the device rebooting. In these events,
+    /**Adds a {@link android.content.BroadcastReceiver} which listens for the user changing the clock,
+     * or the device rebooting. In these cases,
      * it repairs the partially-invalidated Time Data using the remaining intact information.*/
-    public void addDataRepairer(Context c) {
-        IntentFilter phil = new IntentFilter();
-        phil.addAction(Intent.ACTION_BOOT_COMPLETED);
-        phil.addAction(Intent.ACTION_TIME_CHANGED);
-        c.registerReceiver(persistence, phil);
+    public void registerDataPreserver(Context c) {
+        if(preserver == null) {
+            preserver = new TimeDataPreserver(persistence);
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(Intent.ACTION_BOOT_COMPLETED);
+            intentFilter.addAction(Intent.ACTION_TIME_CHANGED);
+            c.registerReceiver(preserver, intentFilter);
+        }
+        else {
+            Log.w(TAG, "call to registerDataPreserver(Context) was unnecessary: we are already registered");
+        }
+    }
+
+    public void unregisterDataPreserver(Context c) {
+        if(preserver != null) {
+            c.unregisterReceiver(preserver);
+            preserver = null;
+        }
+        else {
+            Log.w(TAG, "call to unregisterDataPreserver(Context) was unnecessary: " +
+                    "there is no TimeDataPreserver currently registered");
+        }
     }
 
     public synchronized InstanceType withConnectionTimeout(int timeoutInMillis) {
