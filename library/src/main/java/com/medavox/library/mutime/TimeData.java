@@ -2,10 +2,12 @@ package com.medavox.library.mutime;
 
 import android.os.SystemClock;
 
-/**
- * Created by Adam Howard on 16/10/17.
- */
+import java.util.Date;
 
+/**
+ * @author Adam Howard
+ * created on 16/10/17.
+ */
 class TimeData {
     private long sntpTime;
     private long uptimeAtSntpTime;
@@ -86,5 +88,13 @@ class TimeData {
                         +"; systemClockAtSntpTime="+systemClockAtSntpTime);
             }
         }
+    }
+    @Override
+    public String toString() {
+        return "TimeData ["
+                +"SNTP Time: "+new Date(sntpTime)
+                +"; corresponding System Clock time: "+systemClockAtSntpTime
+                +"; corresponding uptime value: "+uptimeAtSntpTime
+                +"]";
     }
 }
