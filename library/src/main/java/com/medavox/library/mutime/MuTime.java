@@ -10,6 +10,27 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Locale;
 
+/**Base class for accessing the MuTime API.
+ * To get the actual time:
+ *<pre>
+ * {@code
+ * MuTime mu = MuTime.getInstance(ctx);//initialise our singleton
+ *
+ * boolean doWeKnowWhatTheRealTimeIsYet = MuTime.hasTheTime();//false -- no!
+ * //calling mu.now() or mu.nowAsDate() at this point would cause a MissingTimeDataException
+ *
+ * mu.requestTimeFromServer("time.google.com");//use any ntp server address here, eg "time.apple.com"
+ * boolean doWeKnowTheTimeNow = MuTime.hasTheTime();//true -- yes!
+ *
+ * //get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
+ * try {
+ *     long trueTime = mu.now();//throws MissingTimeDataException if we don't know the time
+ * }
+ * catch (Exception e) {
+ *     Log.e("MuTime", "failed to get the actual time:+e.getMessage());
+ * }
+ *
+ * }</pre>*/
 public class MuTime<InstanceType extends MuTime> {
     protected static Persistence persistence;
     protected static final SntpClient SNTP_CLIENT = new SntpClient();
@@ -49,14 +70,42 @@ public class MuTime<InstanceType extends MuTime> {
         return persistence.hasTimeData();
     }
 
-    /**Get the True Time as a {@link Date}
-     * @return Date object that returns the current time in the default Timezone
-     */
-    public Date nowAsDate() throws Exception {
-        return new Date(now());
-    }
+    /**Get the True Time in Unix Epoch format: milliseconds since midnight on 1 January, 1970.
+     * The current time in the default Timezone.
+     *
+     *<p>NOTE: this method makes a synchronous network call,
+     * so to call it from the UI (main) thread you must wrap it in its own thread, like this:
+     * <pre>
+     * {@code
+     *  private AsyncTask<Context, Void, Void> makeRequest = new AsyncTask<Context, Void, Void>() {
+            private final static String TAG = "MuTime Process";
+            @Override
+            protected Void doInBackground(Context... c) {
+                String server = "time.google.com";
+                try {
+                    MuTimeRx t = MuTimeRx.getInstance(c[0]);
+                    if(MuTime.hasTheTime()) {
+                        Log.i(TAG, "Using stored time:"+new Date(t.now()));
+                    }
+                    else {
+                        Log.i(TAG, "Requesting time from " + server + "...");
+                        t.requestTimeFromServer(server);
+                        Log.i(TAG, "time gotten:" + new Date(t.now()));
+                    }
+                }
+                catch(Exception e) {
+                    Log.e(TAG, "Failed to get time from "+server+"; exception:"+e);
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        };
+        //...
+        //from an activity:
+        makeRequest.execute(this);
 
-    /**Get the True Time in Unix Epoch format: milliseconds since midnight on 1 January, 1970.*/
+     * }</pre></p>
+     * @return a Unix Epoch-format timestamp of the actual current time, in the default timezone.*/
     public long now() throws Exception {
         /*3 possible states:
             1. We have fresh SNTP data from a recently-made request, store (atm) in SntpClient
@@ -76,20 +125,14 @@ public class MuTime<InstanceType extends MuTime> {
         return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
     }
 
+    /**Adds a {@link android.content.BroadcastReceiver} which listens for thew user changing the clock,
+     * or the device rebooting. In these events,
+     * it repairs the partially-invalidated Time Data using the remaining intact information.*/
     public void addDataRepairer(Context c) {
         IntentFilter phil = new IntentFilter();
         phil.addAction(Intent.ACTION_BOOT_COMPLETED);
         phil.addAction(Intent.ACTION_TIME_CHANGED);
         c.registerReceiver(persistence, phil);
-    }
-
-    /**
-     * Cache MuTime initialization information in SharedPreferences
-     * This can help avoid additional MuTime initialization on app kills
-     */
-    public synchronized  InstanceType withDiskCache(Context context) {
-        persistence = new Persistence(context);
-        return (InstanceType)this;
     }
 
     public synchronized InstanceType withConnectionTimeout(int timeoutInMillis) {

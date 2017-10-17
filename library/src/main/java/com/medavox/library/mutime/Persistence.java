@@ -15,14 +15,10 @@ import android.util.Log;
  * to allow MuTime to correct its offsets against these events.
  *
  * This class now keeps both the in-memory copy of the time data, plus
-  arbitrates access to the SharedPrefs copy, all under one API.
- all the API user has to do is call {@link #getTimeData()} ,
- and this class will give them in the in-memory copy if it has any,
- retrieve it from shared preferences,
- or finally return null.
+ * arbitrates access to the SharedPrefs copy, all under one API.
+ * all the API user has to do is call {@link #getTimeData()}.
  * */
 class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseListener {
-//
     private static final String SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences";
     private static final String KEY_SYSTEM_CLOCK_TIME = "cached_system_clock_time";
     private static final String KEY_DEVICE_UPTIME = "cached_device_uptime";
@@ -40,33 +36,52 @@ class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseLi
         sharedPrefs = context.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
         Log.i(TAG, "instance:"+this);
     }
-
+    
+    /**Retrieve time offset information.
+     * Gets in the in-memory copy if it exists,
+     * or retrieves it from shared preferences,
+     * or finally returns null.
+     * @return a {@link TimeData} which can be used to compute the real time,
+     * or null if no data is available.*/
     public TimeData getTimeData() {
-        if (sntpResponse != null) {
-            return sntpResponse;
-        }
-        else {
+        if (sntpResponse == null) {
             Log.i(TAG, "no TimeData in memory, attempting to retrieve from SharedPreferences...");
             //Log.i(TAG, "is SharedPrefs null:"+(sharedPrefs == null));
             long sntpTime = sharedPrefs.getLong(KEY_SNTP_TIME, -1);
             long upTime = sharedPrefs.getLong(KEY_DEVICE_UPTIME, -1);
             long clockTime = sharedPrefs.getLong(KEY_SYSTEM_CLOCK_TIME, -1);
 
-            if(sntpTime == -1 || upTime == -1 || clockTime == -1) {
+            if (sntpTime == -1 || upTime == -1 || clockTime == -1) {
                 return null;
             }
-            return new TimeData.Builder()
+            //copy the SharedPreferences data into the in-memory variables
+            sntpResponse = new TimeData.Builder()
                     .sntpTime(sntpTime)
                     .uptimeAtSntpTime(upTime)
                     .systemClockAtSntpTime(clockTime)
                     .build();
         }
-    }
+        //TODO:check that the difference between the the uptime and system clock timestamps
+        //is the same in the TimeData and right now
+        //(this checks to make sure the data is still valid)
 
+
+        return sntpResponse;
+    }
+    /**Whether this library has any time data to */
     public boolean hasTimeData() {
         return getTimeData() != null;
     }
 
+    /**Detects when one of the time stamps have been invalidated by user actions, 
+     * and repairs it using the intact timestamp
+     * 
+     * <p>
+     * 
+     * If the user changes the system clock manually, 
+     * then the uptime timestamp is used to calculate a new vlaue for the system clock time stamp.
+     * 
+     * */
     @Override
     public void onReceive(Context context, Intent intent) {
         TimeData old = getTimeData();
