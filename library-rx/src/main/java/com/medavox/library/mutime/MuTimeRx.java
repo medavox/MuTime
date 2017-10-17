@@ -62,7 +62,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
         return initializeNtp(ntpPoolAddress).map(new Function<long[], Date>() {
             @Override
             public Date apply(long[] longs) throws Exception {
-                return nowAsDate();
+                return new Date(now());
             }
         });
      }
