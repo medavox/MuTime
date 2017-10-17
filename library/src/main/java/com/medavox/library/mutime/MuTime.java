@@ -21,7 +21,7 @@ public class MuTime<InstanceType extends MuTime> {
     private static int _udpSocketTimeoutInMillis = 30_000;
     private static final String TAG = MuTime.class.getSimpleName();
 
-    public static MuTime<MuTime> getInstance(Context c) {
+    public static MuTime getInstance(Context c) {
         if(persistence == null) {
             persistence = new Persistence(c);
         }

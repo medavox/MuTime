@@ -1,5 +1,6 @@
 package com.medavox.library.mutime;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.reactivestreams.Publisher;
@@ -33,9 +34,12 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
 
     private int _retryCount = 50;
 
-    public static MuTimeRx getInstance(Persistence p) {
-        if(RX_INSTANCE == null) {
-            RX_INSTANCE = new MuTimeRx(p);
+    public static MuTimeRx getInstance(Context c) {
+        if(persistence == null) {
+            persistence = new Persistence(c);
+        }
+        if (RX_INSTANCE == null) {
+            RX_INSTANCE = new MuTimeRx(persistence);
         }
         return RX_INSTANCE;
     }
