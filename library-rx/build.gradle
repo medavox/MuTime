@@ -1,5 +1,5 @@
 apply plugin: 'com.android.library'
-apply plugin: 'com.github.dcendents.android-maven'
+//apply plugin: 'com.github.dcendents.android-maven'
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -32,4 +32,4 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-group='com.github.medavox'
+//group='com.github.medavox'
