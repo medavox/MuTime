@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 /**Handles caching of offsets to disk using {@link SharedPreferences},
@@ -42,7 +41,6 @@ class Persistence extends BroadcastReceiver implements SntpClient.SntpResponseLi
         Log.i(TAG, "instance:"+this);
     }
 
-    @Nullable
     public TimeData getTimeData() {
         if (sntpResponse != null) {
             return sntpResponse;

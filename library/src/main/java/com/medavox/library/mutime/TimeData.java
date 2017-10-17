@@ -1,5 +1,7 @@
 package com.medavox.library.mutime;
 
+import android.os.SystemClock;
+
 /**
  * Created by Adam Howard on 16/10/17.
  */
@@ -27,7 +29,7 @@ class TimeData {
 
     /**
      * Device uptime corresponding to the SNTP time.
-     * In other words, this is the value of {@link android.os.SystemClock.elapsedRealtime()}
+     * In other words, this is the value of {@link SystemClock#elapsedRealtime()} ()}
      * at the time represented by {@link #getSntpTime()}.
      */
     public long getUptimeAtSntpTime() {
