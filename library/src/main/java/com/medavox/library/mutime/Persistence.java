@@ -21,9 +21,7 @@ final class Persistence implements SntpClient.SntpResponseListener {
 
     private static SharedPreferences sharedPrefs = null;
 
-    private static TimeData sntpResponse = null;
-
-    private IntentFilter timeChangeFilter = new IntentFilter(Intent.ACTION_TIME_CHANGED);
+    private static TimeData timeData = null;
 
     public Persistence(Context context) {
         sharedPrefs = context.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
@@ -37,8 +35,12 @@ final class Persistence implements SntpClient.SntpResponseListener {
      * @return a {@link TimeData} which can be used to compute the real time,
      * or null if no data is available.*/
     public TimeData getTimeData() {
-        if (sntpResponse == null) {
-            Log.i(TAG, "no TimeData in memory, attempting to retrieve from SharedPreferences...");
+        if (timeData == null) {
+            Log.i(TAG, "no time data in memory, attempting to retrieve from SharedPreferences...");
+            if (sharedPreferencesUnavailable()) {
+                return null;
+            }
+
             //Log.i(TAG, "is SharedPrefs null:"+(sharedPrefs == null));
             long sntpTime = sharedPrefs.getLong(KEY_SNTP_TIME, -1);
             long upTime = sharedPrefs.getLong(KEY_DEVICE_UPTIME, -1);
@@ -99,9 +101,9 @@ final class Persistence implements SntpClient.SntpResponseListener {
                 data.getSystemClockAtSntpTime()));
 
         SharedPreferences.Editor editor = sharedPrefs.edit();
+        editor.putLong(KEY_SNTP_TIME, data.getSntpTime());
         editor.putLong(KEY_SYSTEM_CLOCK_TIME, data.getSystemClockAtSntpTime());
         editor.putLong(KEY_DEVICE_UPTIME, data.getUptimeAtSntpTime());
-        editor.putLong(KEY_SNTP_TIME, data.getSntpTime());
         editor.apply();
     }
 
