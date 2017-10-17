@@ -1,6 +1,6 @@
 # MuTime for Android
 
-![MuTime](truetime.png "MuTime for Android")
+![MuTime](mutime.png "MuTime for Android")
 
 NTP client for Android. Calculate the date and time "now" impervious to manual changes to device clock time.
 
