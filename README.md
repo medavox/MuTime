@@ -4,23 +4,54 @@
 
 NTP client for Android. Calculate the date and time "now" impervious to manual changes to device clock time.
 
-In certain applications it becomes important to get the real or "true" date and time. On most devices, if the clock has been changed manually, then a `new Date()` instance gives you a time impacted by local settings.
+In certain applications it becomes important to get the real or "true" date and time.
+On most devices, if the clock has been changed manually,
+then a `new Date()` instance gives you a time impacted by local settings.
 
-Users may do this for a variety of reasons, like being in different timezones, trying to be punctual by setting their clocks 5 – 10 minutes early, etc. Your application or service may want a date that is unaffected by these changes and reliable as a source of truth. MuTime gives you that.
+Users may do this for a variety of reasons, like being in different timezones, 
+trying to be punctual by setting their clocks 5 – 10 minutes early, etc.
+Your application or service may want a date that is unaffected by these changes and reliable as a source of truth. MuTime gives you that.
 
 You can read more about the use case in Instacart's [blog post](https://tech.instacart.com/truetime/).
 
-In a [recent conference talk](https://vimeo.com/190922794), instacart explained how the full NTP implementation works with Rx. Check the [video](https://vimeo.com/190922794) and [slides](https://speakerdeck.com/kaushikgopal/learning-rx-by-example-2?slide=31) out for implementation details.
+In a [recent conference talk](https://vimeo.com/190922794), 
+instacart explained how the full NTP implementation works with Rx.
+Check the [video](https://vimeo.com/190922794) and 
+[slides](https://speakerdeck.com/kaushikgopal/learning-rx-by-example-2?slide=31) out for implementation details.
 
-## Reason For Fork
+# Reason For Fork
 
-I needed a way of providing reliable time for an app I'm working on, and although the NTP client implementation in [TrueTime](https://github.com/instacart/truetime-android)'s library is more sophisticated that Google's hidden Android [SntpClient](http://grepcode.com/file/repository.grepcode.com/java/ext/com.google.android/android/4.1.1_r1/android/net/SntpClient.java/), I needed even more reliable time-keeping for my use case. It was also apparent (at the time of forking) that [instacart](https://github.com/instacart)/[Kaushik Gopal](https://github.com/kaushikgopal)'s plans for future development (judging from [development branches](https://github.com/instacart/truetime-android/tree/kg/fix/sync_to_atomic)) did not fit with my own needs.
+[I](https://github.com/medavox/) needed a way of providing reliable time for an app I'm working on,
+preserving the correct time across 1) android clock adjustments by the user and 2) device reboots.
+Although the NTP client implementation in [TrueTime](https://github.com/instacart/truetime-android)'s
+library is more sophisticated than Google's hidden Android 
+[SntpClient](http://grepcode.com/file/repository.grepcode.com/java/ext/com.google.android/android/4.1.1_r1/android/net/SntpClient.java/),
+I needed even more reliable time-keeping for my use case. It was also apparent (at the time of forking)
+that [instacart](https://github.com/instacart)/[Kaushik Gopal](https://github.com/kaushikgopal)'s
+plans for future development did not fit with my own needs 
+(judging from [development branches](https://github.com/instacart/truetime-android/tree/kg/fix/sync_to_atomic)).
+
+## Differences From Upstream
+
+MuTime implements a more 'stubborn' 
+[`Persistence`](https://github.com/medavox/MuTime/blob/master/library/src/main/java/com/medavox/library/mutime/Persistence.java) 
+solution, which preserves information about the correct time even after clock changes and device reboots.
+It's a beefed-up version of TrueTime's Disk Cache functionality.
+
+The public API has been revamped somewhat (and the underlying codebase largely rewritten),
+to improve maintainability (in my humble opinion).
+
 
 # How is the true time calculated?
 
-It's pretty simple actually. We make a request to an NTP server that gives us the actual time. We then establish the delta between device uptime and uptime at the time of the network response. On each subsequent request for the true time "now", we compute the correct time from that offset.
+It's pretty simple actually. We make a request to an NTP server that gives us the actual time.
+We then establish the delta between device uptime and uptime at the time of the network response.
+On each subsequent request for the true time "now", we compute the correct time from that offset.
 
-Once we have this offset information, it's valid until the next time you boot your device. This means if you enable the disk caching feature, after a single successful NTP request you can use the information on disk directly without ever making another network request. This applies even across application kills which can happen frequently if your users have a memory starved device.
+Once we have this offset information, it's valid until the next time you boot your device.
+This means if you enable the disk caching feature, after a single successful NTP request you can
+use the information on disk directly without ever making another network request.
+This applies even across application kills which can happen frequently if your users have a memory starved device.
 
 # Installation
 
@@ -39,7 +70,7 @@ dependencies {
     // ...
     compile 'com.github.medavox.mutime:library-extension-rx:<release-version>'
 
-    // or if you want the vanilla version of Truetime:
+    // or if you want the vanilla, SNTP-only version of Mutime:
     compile 'com.github.medavox.mutime:library:<release-version>'
 }
 ```
@@ -48,23 +79,34 @@ dependencies {
 
 ## Vanilla version
 
-Importing `'com.github.medavox.mutime:library:<release-version>'` should be sufficient for this.
-
 ```java
-MuTime.build().initialize();
+MuTime mu = MuTime.getInstance(ctx);//initialise our singleton
+
+boolean doWeKnowWhatTheRealTimeIsYet = MuTime.hasTheTime();//false -- no!
+//calling mu.now() or mu.nowAsDate() at this point would cause a MissingTimeDataException
+
+mu.requestTimeFromServer("time.google.com");//use any ntp server address here, eg "time.apple.com"
+boolean doWeKnowTheTimeNow = MuTime.hasTheTime();//true -- yes!
+
+//get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
+try {
+    long theActualTime = mu.now();//throws MissingTimeDataException if we don't know the time
+}
+catch (Exception e) {
+    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
+}
 ```
 
-`initialize` must be run on a background thread. If you run it on the main thread, you will get a [`NetworkOnMainThreadException`](https://developer.android.com/reference/android/os/NetworkOnMainThreadException.html)
+`requestTimeFromServer(String)` must be run on a background thread. 
+If you run it on the main (UI) thread, you will get a
+[`NetworkOnMainThreadException`](https://developer.android.com/reference/android/os/NetworkOnMainThreadException.html)
 
-You can then use:
 
-```java
-Date noReallyThisIsTheTrueDateAndTime = MuTime.now();
-```
+## Rx Version
 
-## Rx-ified Version
-
-If you're using [RxJava](https://github.com/ReactiveX/RxJava) then we go all the way and implement the full NTP. Use the nifty `initializeRx()` method which takes an NTP pool server host.
+If you use the [RxJava](https://github.com/ReactiveX/RxJava) version then we go all the way 
+and implement the full NTP. Use the nifty `initializeRx()` method which takes an 
+[NTP pool](https://en.wikipedia.org/wiki/NTP_pool) server host.
 
 ```java
 MuTimeRx.build()
@@ -80,7 +122,12 @@ MuTimeRx.build()
 Now, as before:
 
 ```java
-MuTimeRx.now(); // return a Date object with the "true" time.
+try {
+    long theActualTime = mu.now();//throws MissingTimeDataException if we don't know the time
+}
+catch (Exception e) {
+    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
+}
 ```
 
 ### What is nifty about the Rx version?
@@ -93,14 +140,15 @@ MuTimeRx.now(); // return a Date object with the "true" time.
 
 ## Notes/tips:
 
-* Each `initialize` call makes an SNTP network request. MuTime needs to be `initialize`d only once per device boot, if you use MuTime's `withSharedPreferences` option to cache retrieved time-offset values and avoid repeated network requests.
+* Each `requestTimeFromServer(String)` call makes an SNTP network request.
+MuTime needs to do this only once -- barring any , if you use MuTime's `withSharedPreferences`
 * Preferably use dependency injection (like [Dagger](http://square.github.io/dagger/)) and create a MuTime @Singleton object
 * You can read up on Wikipedia the differences between [SNTP](https://en.wikipedia.org/wiki/Network_Time_Protocol#SNTP) and [NTP](https://www.meinbergglobal.com/english/faq/faq_37.htm).
-* MuTime is also [available for iOS/Swift](https://github.com/instacart/truetime.swift)
 
 ## Troubleshooting/Exception handling:
 
-When you execute the MuTime initialization, you are very likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time. This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
+When you execute the MuTime initialization, you are very likely to get an `InvalidNtpServerResponseException` because of root delay violation or root dispersion violation the first time.
+This is an expected occurrence as per the [NTP Spec](https://tools.ietf.org/html/rfc5905) and needs to be handled.
 
 ### Why does this happen?
 
@@ -116,6 +164,9 @@ This means it is highly plausible that we get faulty data packets. These are cau
 
 These guards are *extremely* important to guarantee accurate time and cannot be avoided.
 
+If MuTime fails to initialise (because of the above exception being thrown), then a 
+[`MissingTimeDataException`](https://github.com/medavox/MuTime/blob/master/library/src/main/java/com/medavox/library/mutime/MissingTimeDataException.java)
+ is thrown if you try to request an actual date via `MuTime.now()`.
 
 ### How do I handle or protect against this in my application?
 
@@ -143,9 +194,7 @@ We:-
 
 If you don't use MuTimeRx, you don't get these benefits.
 
-We welcome PRs for folks who wish to replicate the functionality in the vanilla MuTime version. _We don't have plans of re-implementing that functionality atm_ in the vanilla/simple version of MuTime.
-
-Do also note, if MuTime fails to initialize (because of the above exception being thrown), then an `IllegalStateException` is thrown if you try to request an actual date via `MuTime.now()`.
+----
 
 # License
 
