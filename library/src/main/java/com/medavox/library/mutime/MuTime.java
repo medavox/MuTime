@@ -66,6 +66,9 @@ public class MuTime<InstanceType extends MuTime> {
                 persistence);
     }
 
+    /**Whether or not MuTime knows the actual time.
+     * @return Whether or not an immediate call to {@link #now()} would throw a
+     * {@link MissingTimeDataException}.*/
     public static boolean hasTheTime() {
         return persistence.hasTimeData();
     }
@@ -111,7 +114,7 @@ public class MuTime<InstanceType extends MuTime> {
             1. We have fresh SNTP data from a recently-made request, store (atm) in SntpClient
             2. We have cached SNTP data from SharedPreferences
             3. We have no/invalid SNTP data,
-             and don't know the correct time until we make a network request
+             and won't know the correct time until we make a network request
 */
         TimeData timeData = persistence.getTimeData();//throws NullPointerException
         if(timeData == null) {
