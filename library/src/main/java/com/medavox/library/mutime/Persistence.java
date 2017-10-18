@@ -27,6 +27,19 @@ final class Persistence implements SntpClient.SntpResponseListener {
         sharedPrefs = context.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
         Log.i(TAG, "instance:"+this);
     }
+
+    public Persistence() {
+        Log.w(TAG, "not providing a Context to access SharedPreferences disables most of Persistence's features!");
+        Log.i(TAG, "instance:"+this);
+    }
+
+    public void enabledDiskCache(Context c) {
+        sharedPrefs = c.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
+    }
+
+    public void disableDiskCache() {
+        sharedPrefs = null;
+    }
     
     /**Retrieve time offset information.
      * Gets in the in-memory copy if it exists,
@@ -37,7 +50,7 @@ final class Persistence implements SntpClient.SntpResponseListener {
     public TimeData getTimeData() {
         if (timeData == null) {
             Log.i(TAG, "no time data in memory, attempting to retrieve from SharedPreferences...");
-            if (sharedPreferencesUnavailable()) {
+            if (!sharedPreferencesAvailable()) {
                 return null;
             }
 
@@ -82,6 +95,10 @@ final class Persistence implements SntpClient.SntpResponseListener {
         return getTimeData() != null;
     }
 
+    public boolean diskCacheEnabled() {
+        return sharedPrefs != null;
+    }
+
 
     /**Saves the received {@link TimeData}, both locally as instance variables,
      * and into SharedPreferences.*/
@@ -90,7 +107,7 @@ final class Persistence implements SntpClient.SntpResponseListener {
         Log.d(TAG, "got time info:"+data);
         timeData = data;
 
-        if (sharedPreferencesUnavailable()) {
+        if (!sharedPreferencesAvailable()) {
             return;
         }
 
@@ -109,11 +126,11 @@ final class Persistence implements SntpClient.SntpResponseListener {
 
     // -----------------------------------------------------------------------------------
 
-    private boolean sharedPreferencesUnavailable() {
+    private boolean sharedPreferencesAvailable() {
         if (sharedPrefs == null) {
-            Log.e(TAG, "SharedPreferences was null; Cannot cache NTP offset for MuTime. ");
-            return true;
+            Log.w(TAG, "Context info is not provided, so SharedPreferences is null; Cannot interact with time data on-disk.");
+            return false;
         }
-        return false;
+        return true;
     }
 }
