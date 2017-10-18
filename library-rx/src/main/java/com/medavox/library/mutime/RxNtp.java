@@ -1,6 +1,5 @@
 package com.medavox.library.mutime;
 
-import android.content.Context;
 import android.util.Log;
 
 import org.reactivestreams.Publisher;
@@ -27,28 +26,21 @@ import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.schedulers.Schedulers;
 
-public class MuTimeRx extends MuTime<MuTimeRx> {
+public class RxNtp {
 
-    private static MuTimeRx RX_INSTANCE;
-    private static final String TAG = MuTimeRx.class.getSimpleName();
+    private static RxNtp RX_INSTANCE;
+    private static final String TAG = RxNtp.class.getSimpleName();
 
     private int _retryCount = 50;
 
-    public static MuTimeRx getInstance(Context c) {
-        if(persistence == null) {
-            persistence = new Persistence(c);
-        }
+    public static RxNtp getInstance() {
         if (RX_INSTANCE == null) {
-            RX_INSTANCE = new MuTimeRx(persistence);
+            RX_INSTANCE = new RxNtp();
         }
         return RX_INSTANCE;
     }
 
-    protected MuTimeRx(Persistence p) {
-        super(p);
-    }
-
-    public MuTimeRx withRetryCount(int retryCount) {
+    public RxNtp withRetryCount(int retryCount) {
         _retryCount = retryCount;
         return this;
     }
@@ -62,7 +54,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
         return initializeNtp(ntpPoolAddress).map(new Function<long[], Date>() {
             @Override
             public Date apply(long[] longs) throws Exception {
-                return new Date(now());
+                return new Date(MuTime.now());
             }
         });
      }
@@ -132,7 +124,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
                       @Override
                       public void accept(long[] ntpResponse) {
                           //SNTP_CLIENT.storeTimeOffset(ntpResponse);
-                          persistence.onSntpTimeData(SNTP_CLIENT.fromLongArray(ntpResponse));
+                          MuTime.persistence.onSntpTimeData(SntpClient.fromLongArray(ntpResponse));
                       }
                   });
         }
@@ -182,7 +174,7 @@ public class MuTimeRx extends MuTime<MuTimeRx> {
                                         Log.d(TAG,
                                             "---- requestTimeFromServer from: " + singleIpHostAddress);
                                         try {
-                                            o.onNext(requestTimeFromServer(singleIpHostAddress));
+                                            o.onNext(MuTime.requestTimeFromServer(singleIpHostAddress).send());
                                             o.onComplete();
                                         } catch (IOException e) {
                                             if (!o.isCancelled()) {
