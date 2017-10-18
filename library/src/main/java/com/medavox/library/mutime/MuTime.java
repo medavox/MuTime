@@ -6,42 +6,26 @@ import android.content.IntentFilter;
 import android.os.SystemClock;
 import android.util.Log;
 
-import java.io.IOException;
-import java.util.Locale;
-
 /**Base class for accessing the MuTime API.
  * To get the actual time:
  *<pre>
  * {@code
- * MuTime mu = MuTime.getInstance(ctx);//initialise our singleton
+ * MuTime.requestTimeFromServer("time.google.com").send();//use any ntp server address here, eg "time.apple.com"
  *
- * boolean doWeKnowWhatTheRealTimeIsYet = MuTime.hasTheTime();//false -- no!
- * //calling mu.now() or mu.nowAsDate() at this point would cause a MissingTimeDataException
- *
- * mu.requestTimeFromServer("time.google.com");//use any ntp server address here, eg "time.apple.com"
- * boolean doWeKnowTheTimeNow = MuTime.hasTheTime();//true -- yes!
- *
- * //get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
+ *  //get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
  * try {
- *     long trueTime = mu.now();//throws MissingTimeDataException if we don't know the time
+ *     long trueTime = MuTime.now();//throws MissingTimeDataException if we don't know the time
  * }
  * catch (Exception e) {
  *     Log.e("MuTime", "failed to get the actual time:+e.getMessage());
  * }
  * }</pre>*/
-public class MuTime<InstanceType extends MuTime> {
-    protected static Persistence persistence;
-    protected static final SntpClient SNTP_CLIENT = new SntpClient();
+public class MuTime {
+    static final Persistence persistence = new Persistence();
 
-    private static MuTime INSTANCE;
-    private static float _rootDelayMax = 100;
-    private static float _rootDispersionMax = 100;
-    private static int _serverResponseDelayMax = 200;
-    private static int _udpSocketTimeoutInMillis = 30_000;
+    private static TimeDataPreserver preserver = null;
     private static final String TAG = MuTime.class.getSimpleName();
-
-    private TimeDataPreserver preserver = null;
-
+/*
     public static MuTime getInstance(Context c) {
         if(persistence == null) {
             persistence = new Persistence(c);
@@ -51,19 +35,14 @@ public class MuTime<InstanceType extends MuTime> {
         }
         return INSTANCE;
     }
-
-    protected MuTime(Persistence p) {
-        this.persistence = p;
+  */
+    private MuTime() {
+        throw new AssertionError("this class should not be instantiated");
     }
 
     /**Call this at least once to get reliable time from an NTP server.*/
-    public long[] requestTimeFromServer(String ntpHost) throws IOException {
-        return SNTP_CLIENT.requestTime(ntpHost,
-                _rootDelayMax,
-                _rootDispersionMax,
-                _serverResponseDelayMax,
-                _udpSocketTimeoutInMillis,
-                persistence);
+    public static SntpRequest requestTimeFromServer(String ntpHost) {
+        return new SntpRequest(ntpHost, persistence);
     }
 
     /**Whether or not MuTime knows the actual time.
@@ -109,7 +88,7 @@ public class MuTime<InstanceType extends MuTime> {
 
      * }</pre></p>
      * @return a Unix Epoch-format timestamp of the actual current time, in the default timezone.*/
-    public long now() throws Exception {
+    public static long now() throws MissingTimeDataException {
         /*3 possible states:
             1. We have fresh SNTP data from a recently-made request, store (atm) in SntpClient
             2. We have cached SNTP data from SharedPreferences
@@ -119,7 +98,8 @@ public class MuTime<InstanceType extends MuTime> {
         TimeData timeData = persistence.getTimeData();//throws NullPointerException
         if(timeData == null) {
             throw new MissingTimeDataException("time data is missing or invalid. " +
-                    "Please make an NTP network request to refresh the true time");
+                    "Please make an NTP network request by calling " +
+                    "MuTime.requestTimeFromServer(String) to refresh the true time");
         }
 
         long cachedSntpTime = timeData.getSntpTime();
@@ -128,10 +108,22 @@ public class MuTime<InstanceType extends MuTime> {
         return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
     }
 
+    public static void enableDiskCaching(Context c) {
+        persistence.enabledDiskCache(c);
+    }
+
+    public static void disableDiskCaching() {
+        persistence.disableDiskCache();
+    }
+
+    public static boolean diskCacheEnabled() {
+        return persistence.diskCacheEnabled();
+    }
+
     /**Adds a {@link android.content.BroadcastReceiver} which listens for the user changing the clock,
      * or the device rebooting. In these cases,
      * it repairs the partially-invalidated Time Data using the remaining intact information.*/
-    public void registerDataPreserver(Context c) {
+    public static void registerDataPreserver(Context c) {
         if(preserver == null) {
             preserver = new TimeDataPreserver(persistence);
             IntentFilter intentFilter = new IntentFilter();
@@ -144,7 +136,7 @@ public class MuTime<InstanceType extends MuTime> {
         }
     }
 
-    public void unregisterDataPreserver(Context c) {
+    public static void unregisterDataPreserver(Context c) {
         if(preserver != null) {
             c.unregisterReceiver(preserver);
             preserver = null;
@@ -153,39 +145,5 @@ public class MuTime<InstanceType extends MuTime> {
             Log.w(TAG, "call to unregisterDataPreserver(Context) was unnecessary: " +
                     "there is no TimeDataPreserver currently registered");
         }
-    }
-
-    public synchronized InstanceType withConnectionTimeout(int timeoutInMillis) {
-        _udpSocketTimeoutInMillis = timeoutInMillis;
-        return (InstanceType)this;
-    }
-
-    public synchronized InstanceType withRootDelayMax(float rootDelayMax) {
-        if (rootDelayMax > _rootDelayMax) {
-            String log = String.format(Locale.getDefault(),
-                "The recommended max rootDelay value is %f. You are setting it at %f",
-                _rootDelayMax, rootDelayMax);
-            Log.w(TAG, log);
-        }
-
-        _rootDelayMax = rootDelayMax;
-        return (InstanceType)this;
-    }
-
-    public synchronized InstanceType withRootDispersionMax(float rootDispersionMax) {
-        if (rootDispersionMax > _rootDispersionMax) {
-            Log.w(TAG, String.format(Locale.getDefault(),
-            "The recommended max rootDispersion value is %f. You are setting it at %f",
-            _rootDispersionMax, rootDispersionMax));
-        }
-
-        _rootDispersionMax = rootDispersionMax;
-
-        return (InstanceType)this;
-    }
-
-    public synchronized InstanceType withServerResponseDelayMax(int serverResponseDelayInMillis) {
-        _serverResponseDelayMax = serverResponseDelayInMillis;
-        return (InstanceType)this;
     }
 }
