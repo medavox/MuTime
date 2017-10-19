@@ -33,11 +33,12 @@ final class Persistence implements SntpClient.SntpResponseListener {
         Log.i(TAG, "instance:"+this);
     }
 
-    public void enabledDiskCache(Context c) {
+
+    void enabledDiskCache(Context c) {
         sharedPrefs = c.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE);
     }
 
-    public void disableDiskCache() {
+    void disableDiskCache() {
         sharedPrefs = null;
     }
     
@@ -47,7 +48,7 @@ final class Persistence implements SntpClient.SntpResponseListener {
      * or finally returns null.
      * @return a {@link TimeData} which can be used to compute the real time,
      * or null if no data is available.*/
-    public TimeData getTimeData() {
+    TimeData getTimeData() {
         if (timeData == null) {
             Log.i(TAG, "no time data in memory, attempting to retrieve from SharedPreferences...");
             if (!sharedPreferencesAvailable()) {
@@ -91,11 +92,12 @@ final class Persistence implements SntpClient.SntpResponseListener {
         return timeData;
     }
     /**Whether this class has any time data to give*/
-    public boolean hasTimeData() {
+    boolean hasTimeData() {
         return getTimeData() != null;
     }
 
-    public boolean diskCacheEnabled() {
+    /**Whether this class has a valid reference to a {@link SharedPreferences} instance*/
+    boolean diskCacheEnabled() {
         return sharedPrefs != null;
     }
 
