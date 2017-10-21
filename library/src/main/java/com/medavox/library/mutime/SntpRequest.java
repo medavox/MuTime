@@ -5,11 +5,14 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.Locale;
 
-/**
+/**Describes a network request for the time.
+ * Its fluent API allows you to set various SNTP parameters, if you wish.
+ * If you don't, its defaults are sensible.
+ *
+ *<p>To actually make the network request, call {@link #send()}.</p>
  * @author Adam Howard
- * @date 18/10/17
+ * created on 18/10/17
  */
-
 public final class SntpRequest {
     static final SntpClient SNTP_CLIENT = new SntpClient();
 

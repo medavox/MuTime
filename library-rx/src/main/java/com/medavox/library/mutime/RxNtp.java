@@ -95,7 +95,7 @@ public class RxNtp {
 
     //----------------------------------------------------------------------------------------
 
-    /**Transformer that takes in a pool of NTP addresses
+    /**Takes in a pool of NTP addresses.
      * Against each IP host we issue a UDP call and retrieve the best response using the NTP algorithm
      */
     private FlowableTransformer<InetAddress, long[]> performNtpAlgorithm
@@ -156,6 +156,9 @@ public class RxNtp {
         }
     };
 
+    /**Takes a single NTP host (as a String),
+     * performs an SNTP request on it repeatCount number of times,
+     * and returns the single result with the lowest round-trip delay*/
     private Function<String, Flowable<long[]>> bestResponseAgainstSingleIp(final int repeatCount) {
         return new Function<String, Flowable<long[]>>() {
             @Override
@@ -200,6 +203,7 @@ public class RxNtp {
         };
     }
 
+    /**Takes a List of NTP responses, and returns the one with the smallest round-trip delay*/
     private Function<List<long[]>, long[]> filterLeastRoundTripDelay
     = new Function<List<long[]>, long[]>() {
         @Override
@@ -219,6 +223,7 @@ public class RxNtp {
         }
     };
 
+    /**Takes a list of NTP responses, and returns the one with the median value for clock offset*/
     private Function<List<long[]>, long[]> filterMedianResponse
     = new Function<List<long[]>, long[]>() {
         @Override

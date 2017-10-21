@@ -56,7 +56,12 @@ public class MuTime {
      * The current time in the default Timezone.
      *
      *<p>NOTE: this method makes a synchronous network call,
-     * so to call it from the UI (main) thread you must wrap it in its own thread, like this:
+     * so you must call it from a background thread (not the the main/UI thread)
+     * or you will get a {@link android.os.NetworkOnMainThreadException}.
+     * </p>
+     * <p>
+     * Try something like this:
+     * </p>
      * <pre>
      * {@code
      *  private AsyncTask<Context, Void, Void> makeRequest = new AsyncTask<Context, Void, Void>() {
@@ -86,7 +91,7 @@ public class MuTime {
         //from an activity:
         makeRequest.execute(this);
 
-     * }</pre></p>
+     * }</pre>
      * @return a Unix Epoch-format timestamp of the actual current time, in the default timezone.*/
     public static long now() throws MissingTimeDataException {
         /*3 possible states:
@@ -108,21 +113,30 @@ public class MuTime {
         return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
     }
 
+    /**Enable the use of {@link android.content.SharedPreferences}
+     * to store time data across app closes, system reboots and system clock meddling.
+     * @param c a Context object which is needed for accessing SharedPreferences*/
     public static void enableDiskCaching(Context c) {
         persistence.enabledDiskCache(c);
     }
 
+    /**Disable storing of Time Data on-disk.
+     * This method is provided for the sake of API completeness; why would you actually want to???*/
     public static void disableDiskCaching() {
         persistence.disableDiskCache();
     }
 
+    /**Check whether disk caching has been enabled.
+     * @return whether disk caching has been enabled*/
     public static boolean diskCacheEnabled() {
         return persistence.diskCacheEnabled();
     }
 
     /**Adds a {@link android.content.BroadcastReceiver} which listens for the user changing the clock,
      * or the device rebooting. In these cases,
-     * it repairs the partially-invalidated Time Data using the remaining intact information.*/
+     * it repairs the partially-invalidated Time Data using the remaining intact information.
+     * @param c Needed for accessing the Android BroadcastReceiver API,
+     *          eg {@link Context#registerReceiver(BroadcastReceiver, IntentFilter)}*/
     public static void registerDataPreserver(Context c) {
         if(preserver == null) {
             preserver = new TimeDataPreserver(persistence);
