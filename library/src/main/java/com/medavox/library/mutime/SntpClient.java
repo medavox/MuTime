@@ -31,60 +31,21 @@ import java.net.InetAddress;
 class SntpClient {
     private static final String TAG = SntpClient.class.getSimpleName();
 
-    private static final class Response {
-        public static final int INDEX_ORIGINATE_TIME = 0;
-        public static final int INDEX_RECEIVE_TIME = 1;
-        public static final int INDEX_TRANSMIT_TIME = 2;
-        public static final int INDEX_RESPONSE_TIME = 3;
-        public static final int INDEX_ROOT_DELAY = 4;
-        public static final int INDEX_DISPERSION = 5;
-        public static final int INDEX_STRATUM = 6;
-        public static final int INDEX_RESPONSE_TICKS = 7;
-        public static final int SIZE = 8;
-    }
+    private static final int INDEX_VERSION = 0;
+    private static final int INDEX_ROOT_DELAY = 4;
+    private static final int INDEX_ROOT_DISPERSION = 8;
+    private static final int INDEX_ORIGINATE_TIME = 24;
+    private static final int INDEX_RECEIVE_TIME = 32;
+    private static final int INDEX_TRANSMIT_TIME = 40;
 
-    private static final class Request {
-        private static final int INDEX_VERSION = 0;
-        private static final int INDEX_ROOT_DELAY = 4;
-        private static final int INDEX_ROOT_DISPERSION = 8;
-        private static final int INDEX_ORIGINATE_TIME = 24;
-        private static final int INDEX_RECEIVE_TIME = 32;
-        private static final int INDEX_TRANSMIT_TIME = 40;
-        private static final int NTP_PORT = 123;
-        private static final int NTP_MODE = 3;
-        private static final int NTP_VERSION = 3;
-        private static final int NTP_PACKET_SIZE = 48;
-    }
+
+    static final int NTP_PORT = 123;
+    static final int NTP_MODE = 3;
+    static final int NTP_VERSION = 3;
+    static final int NTP_PACKET_SIZE = 48;
 
     // 70 years plus 17 leap days
     private static final long OFFSET_1900_TO_1970 = ((365L * 70L) + 17L) * 24L * 60L * 60L;
-
-    /**Calculate the round-trip delay (n milliseconds) from the provided data.
-     * See :
-     * https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-     */
-    public static long calcRoundTripDelay(long[] t) {
-        return (t[Response.INDEX_RESPONSE_TIME] - t[Response.INDEX_ORIGINATE_TIME]) -
-               (t[Response.INDEX_TRANSMIT_TIME] - t[Response.INDEX_RECEIVE_TIME]);
-    }
-
-    /**Calculate
-     * See :
-     * https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
-     */
-    public static long calcClockOffset(long[] response) {
-        return ((response[Response.INDEX_RECEIVE_TIME] - response[Response.INDEX_ORIGINATE_TIME]) +
-                (response[Response.INDEX_TRANSMIT_TIME] - response[Response.INDEX_RESPONSE_TIME])) / 2;
-    }
-
-    public static TimeData fromLongArray(long[] t) {
-        return new TimeData.Builder()
-                .sntpTime(t[Response.INDEX_RESPONSE_TIME] + calcClockOffset(t))
-                .uptimeAtSntpTime(t[Response.INDEX_RESPONSE_TICKS])
-                .systemClockAtSntpTime(System.currentTimeMillis() -
-                        (SystemClock.elapsedRealtime() - t[Response.INDEX_RESPONSE_TICKS]))
-                .build();
-    }
 
     /**
      * Sends an NTP request to the given host and processes the response.
@@ -92,78 +53,75 @@ class SntpClient {
      * @param ntpHost host name of the server.
      * @param timeout network timeout in milliseconds.
      */
-    synchronized long[] requestTime(String ntpHost,
-        float rootDelayMax,
-        float rootDispersionMax,
-        int serverResponseDelayMax,
-        int timeout,
-        SntpResponseListener listener) throws IOException {
+    synchronized TimeData requestTime(String ntpHost,
+                                       float rootDelayMax,
+                                       float rootDispersionMax,
+                                       int serverResponseDelayMax,
+                                       int timeout,
+                                       SntpResponseListener listener) throws IOException {
         Log.d(TAG, "requesting the time from "+ntpHost+"...");
         DatagramSocket socket = null;
 
         try {
             InetAddress address = InetAddress.getByName(ntpHost);
-            byte[] buffer = new byte[Request.NTP_PACKET_SIZE];
-            DatagramPacket request = new DatagramPacket(buffer, buffer.length, address, Request.NTP_PORT);
+            byte[] buffer = new byte[NTP_PACKET_SIZE];
+            DatagramPacket request = new DatagramPacket(buffer, buffer.length, address, NTP_PORT);
 
             // set mode and version
             // mode is in low 3 bits of first byte
             // version is in bits 3-5 of first byte
-            buffer[Request.INDEX_VERSION] = Request.NTP_MODE | (Request.NTP_VERSION << 3);
+            buffer[INDEX_VERSION] = NTP_MODE | (NTP_VERSION << 3);
 
-            // get current time and write it to the request packet
-            long requestTime = System.currentTimeMillis();
-            long requestTicks = SystemClock.elapsedRealtime();
-            writeTimeStamp(buffer, Request.INDEX_TRANSMIT_TIME, requestTime);
-
+            //initialise socket
             socket = new DatagramSocket();
             socket.setSoTimeout(timeout);
+
+            // get current time and write it to the request packet
+            long clockAtRequest = System.currentTimeMillis();
+            long uptimeAtRequest = SystemClock.elapsedRealtime();
+            writeTimeStamp(buffer, INDEX_TRANSMIT_TIME, clockAtRequest);
+
             socket.send(request);
 
             // read the response
-            long t[] = new long[Response.SIZE];
             DatagramPacket response = new DatagramPacket(buffer, buffer.length);
-            socket.receive(response);
 
-            //not all the values in the long[] come form the server!
-            long responseTicks = SystemClock.elapsedRealtime();
-            t[Response.INDEX_RESPONSE_TICKS] = responseTicks;
+            socket.receive(response);
+            long uptimeAtResponse = SystemClock.elapsedRealtime();//=clockAtSntpTime
+            long clockAtResponse = System.currentTimeMillis();//=uptimeOffset
 
             // extract the results
             // See here for the algorithm used:
             // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
 
-            long originateTime = readTimeStamp(buffer, Request.INDEX_ORIGINATE_TIME);     // T0
-            long receiveTime = readTimeStamp(buffer, Request.INDEX_RECEIVE_TIME);         // T1
-            long transmitTime = readTimeStamp(buffer, Request.INDEX_TRANSMIT_TIME);       // T2
-            long responseTime = requestTime + (responseTicks - requestTicks);     // T3
+            //long originateTime = readTimeStamp(buffer, INDEX_ORIGINATE_TIME);     // T0
+            long receiveTime = readTimeStamp(buffer, INDEX_RECEIVE_TIME);         // T1
+            long transmitTime = readTimeStamp(buffer, INDEX_TRANSMIT_TIME);       // T2
 
-            t[Response.INDEX_ORIGINATE_TIME] = originateTime;
-            t[Response.INDEX_RECEIVE_TIME] = receiveTime;
-            t[Response.INDEX_TRANSMIT_TIME] = transmitTime;
-            t[Response.INDEX_RESPONSE_TIME] = responseTime;
+            long responseTime = clockAtRequest + (uptimeAtResponse - uptimeAtRequest);//T3
+            long differenceBetweenCalculatedAndClock = responseTime - clockAtResponse;
+            Log.v(TAG, "difference between calculated responseTime and equivalent System Clock value: "+
+            differenceBetweenCalculatedAndClock);
 
             // -----------------------------------------------------------------------------------
             // check validity of response
 
-            t[Response.INDEX_ROOT_DELAY] = read(buffer, Request.INDEX_ROOT_DELAY);
-            double rootDelay = doubleMillis(t[Response.INDEX_ROOT_DELAY]);
+            double rootDelay = doubleMillis(read(buffer, INDEX_ROOT_DELAY));
             if (rootDelay > rootDelayMax) {
                 throw new InvalidNtpResponseException(
-                    "Invalid response from NTP server. %s violation. %f [actual] > %f [expected]",
-                    "root_delay",
-                    (float) rootDelay,
-                    rootDelayMax);
+                        "Invalid response from NTP server. %s violation. %f [actual] > %f [expected]",
+                        "root_delay",
+                        (float) rootDelay,
+                        rootDelayMax);
             }
 
-            t[Response.INDEX_DISPERSION] = read(buffer, Request.INDEX_ROOT_DISPERSION);
-            double rootDispersion = doubleMillis(t[Response.INDEX_DISPERSION]);
+            double rootDispersion = doubleMillis(read(buffer, INDEX_ROOT_DISPERSION));
             if (rootDispersion > rootDispersionMax) {
                 throw new InvalidNtpResponseException(
-                    "Invalid response from NTP server. %s violation. %f [actual] > %f [expected]",
-                    "root_dispersion",
-                    (float) rootDispersion,
-                    rootDispersionMax);
+                        "Invalid response from NTP server. %s violation. %f [actual] > %f [expected]",
+                        "root_dispersion",
+                        (float) rootDispersion,
+                        rootDispersionMax);
             }
 
             final byte mode = (byte) (buffer[0] & 0x7);
@@ -172,7 +130,6 @@ class SntpClient {
             }
 
             final int stratum = buffer[1] & 0xff;
-            t[Response.INDEX_STRATUM] = stratum;
             if (stratum < 1 || stratum > 15) {
                 throw new InvalidNtpResponseException("untrusted stratum value for MuTime: " + stratum);
             }
@@ -182,16 +139,17 @@ class SntpClient {
                 throw new InvalidNtpResponseException("unsynchronized server responded for MuTime");
             }
 
-            double delay = Math.abs(calcRoundTripDelay(t));
+            long roundTripDelay = (clockAtResponse - clockAtRequest) - (transmitTime - receiveTime);
+            long delay = Math.abs(roundTripDelay);
             if (delay >= serverResponseDelayMax) {
                 throw new InvalidNtpResponseException(
-                    "%s too large for comfort %f [actual] >= %f [expected]",
+                    "%s too large for comfort; %f [actual] >= %f [max]",
                     "server_response_delay",
                     (float) delay,
                     serverResponseDelayMax);
             }
 
-            long timeElapsedSinceRequest = Math.abs(originateTime - System.currentTimeMillis());
+            long timeElapsedSinceRequest = Math.abs(clockAtRequest - System.currentTimeMillis());
             if (timeElapsedSinceRequest >= 10_000) {
                 throw new InvalidNtpResponseException("Request was sent more than 10 seconds ago " +
                                                             timeElapsedSinceRequest);
@@ -200,10 +158,18 @@ class SntpClient {
             // -----------------------------------------------------------------------------------
 
             //response data is valid, send time info from response
-            //storeTimeOffset(t);
-            listener.onSntpTimeData(fromLongArray(t));
+            //TimeData td = new TimeData.Builder().roundTripDelay()
+            long clockOffset = ((receiveTime - clockAtRequest) + (transmitTime - clockAtResponse)) / 2;
+            long uptimeOffset = ((receiveTime - uptimeAtRequest) + (transmitTime - uptimeAtResponse)) / 2;
+
+            TimeData td = new TimeData.Builder()
+                    .systemClockOffset(clockOffset)
+                    .uptimeOffset(uptimeOffset)
+                    .roundTripDelay(roundTripDelay)
+                    .build();
+            listener.onSntpTimeData(td);
             Log.i(TAG, "---- SNTP successful response from " + ntpHost);
-            return t;
+            return td;
         } catch (Exception e) {
             Log.e(TAG, "SNTP request failed for " + ntpHost+": "+e);
             e.printStackTrace();
@@ -214,14 +180,7 @@ class SntpClient {
             }
         }
     }
-/*
-    synchronized void storeTimeOffset(long[] response) {
-        long clockOffset = calcClockOffset(response);
-        long responseTime = response[Response.INDEX_RESPONSE_TIME];
-        _sntpTime = responseTime + clockOffset;
-        _deviceUptime = response[Response.INDEX_RESPONSE_TICKS];
-    }
-*/
+
     //--------------------------------------------------------------------------------------------
 
     /**
@@ -305,11 +264,12 @@ class SntpClient {
      * @param fix signed fixed point number
      * @return as a double in milliseconds
      */
+    //todo: replace floating-point arithmetic
     private double doubleMillis(long fix) {
         return fix / 65.536D;
     }
 
-    static interface SntpResponseListener {
+    interface SntpResponseListener {
         void onSntpTimeData(TimeData data);
     }
 }

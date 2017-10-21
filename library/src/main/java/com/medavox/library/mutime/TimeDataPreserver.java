@@ -32,35 +32,32 @@ public final class TimeDataPreserver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         TimeData old = persistence.getTimeData();
         Log.i(TAG, "action \""+intent.getAction()+"\" detected. Repairing TimeData...");
+        long clockNow = System.currentTimeMillis();
+        long uptimeNow = SystemClock.elapsedRealtime();
+        long trueTime;
+        TimeData.Builder builder = new TimeData.Builder(old);
         switch(intent.getAction()) {
             case Intent.ACTION_BOOT_COMPLETED:
                 //uptime can no longer be trusted
 
-                long newTrustedUptimeAtSntpTime =
-                        SystemClock.elapsedRealtime() - (System.currentTimeMillis() - old.getSystemClockAtSntpTime());
-                TimeData fixedUptime = new TimeData.Builder(old)
-                        .systemClockAtSntpTime(newTrustedUptimeAtSntpTime)
+                trueTime = clockNow + old.getClockOffset();
+                long newUptimeOffset = trueTime - uptimeNow;
+
+                TimeData fixedUptime = builder
+                        .uptimeOffset(newUptimeOffset)
                         .build();
                 persistence.onSntpTimeData(fixedUptime);
 
                 break;
 
             case Intent.ACTION_TIME_CHANGED:
-                //system clock can no longer be trusted
-                /*so if the uptime was x at a KNOWN true time,
-                * and we know the uptime is y nowAsDate,
-                * then we know it's been z since the known true time.
-                *
-                * get the new system clock value as of now (w),
-                * then subtract z from it.
-                *
-                * THAT is the new systemclock time as of the sntp response
-                */
+                //offset from system clock can no longer be trusted
 
-                long newTrustedSystemClockAtSntpTime =
-                        System.currentTimeMillis() - (SystemClock.elapsedRealtime() - old.getUptimeAtSntpTime());
-                TimeData fixedSystemClockTime = new TimeData.Builder(old)
-                        .systemClockAtSntpTime(newTrustedSystemClockAtSntpTime)
+                trueTime = uptimeNow + old.getUptimeOffset();
+                long newClockOffset = trueTime - clockNow;
+
+                TimeData fixedSystemClockTime = builder
+                        .systemClockOffset(newClockOffset)
                         .build();
                 persistence.onSntpTimeData(fixedSystemClockTime);
         }

@@ -13,9 +13,9 @@ import android.util.Log;
  * */
 final class Persistence implements SntpClient.SntpResponseListener {
     private static final String SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences";
-    private static final String KEY_SYSTEM_CLOCK_TIME = "cached_system_clock_time";
-    private static final String KEY_DEVICE_UPTIME = "cached_device_uptime";
-    private static final String KEY_SNTP_TIME = "cached_sntp_time";
+    private static final String KEY_SYSTEM_CLOCK_OFFSET = "system clock offset";
+    private static final String KEY_UPTIME_OFFSET = "uptime offset";
+    private static final String KEY_ROUND_TRIP_DELAY = "round trip delay";
 
     private static final String TAG = Persistence.class.getSimpleName();
 
@@ -56,36 +56,36 @@ final class Persistence implements SntpClient.SntpResponseListener {
             }
 
             //Log.i(TAG, "is SharedPrefs null:"+(sharedPrefs == null));
-            long sntpTime = sharedPrefs.getLong(KEY_SNTP_TIME, -1);
-            long upTime = sharedPrefs.getLong(KEY_DEVICE_UPTIME, -1);
-            long clockTime = sharedPrefs.getLong(KEY_SYSTEM_CLOCK_TIME, -1);
+            long roundTripDelay = sharedPrefs.getLong(KEY_ROUND_TRIP_DELAY, -1);
+            long upTime = sharedPrefs.getLong(KEY_UPTIME_OFFSET, -1);
+            long clockTime = sharedPrefs.getLong(KEY_SYSTEM_CLOCK_OFFSET, -1);
 
-            if (sntpTime == -1 || upTime == -1 || clockTime == -1) {
+            if (roundTripDelay == -1 || upTime == -1 || clockTime == -1) {
                 return null;
             }
             //copy the SharedPreferences data into the in-memory variables
             timeData = new TimeData.Builder()
-                    .sntpTime(sntpTime)
-                    .uptimeAtSntpTime(upTime)
-                    .systemClockAtSntpTime(clockTime)
+                    .roundTripDelay(roundTripDelay)
+                    .uptimeOffset(upTime)
+                    .systemClockOffset(clockTime)
                     .build();
         }
 
         //check that the difference between the the uptime and system clock timestamps
         //is the same in the TimeData and right now
         //(this checks to make sure the data is still valid)
-        long differenceBetweenStoredClocks = timeData.getSystemClockAtSntpTime() - timeData.getUptimeAtSntpTime();
-        long differenceBetweenLiveClocks = System.currentTimeMillis() - SystemClock.elapsedRealtime();
+        long storedClocksDiff = timeData.getClockOffset() - timeData.getUptimeOffset();
+        long liveClocksDiff = System.currentTimeMillis() - SystemClock.elapsedRealtime();
 
-        if(Math.abs(differenceBetweenStoredClocks - differenceBetweenLiveClocks) > 10/*milliseconds*/) {
+        if(Math.abs(storedClocksDiff - liveClocksDiff) > 10/*milliseconds*/) {
             Log.e(TAG, "Time Data was found to be invalid when checked! " +
                     "A fresh network request is required to compute the correct time.");
             //clear the invalid data
             timeData = null;
             SharedPreferences.Editor e = sharedPrefs.edit();
-            e.remove(KEY_SNTP_TIME);
-            e.remove(KEY_SYSTEM_CLOCK_TIME);
-            e.remove(KEY_DEVICE_UPTIME);
+            e.remove(KEY_ROUND_TRIP_DELAY);
+            e.remove(KEY_SYSTEM_CLOCK_OFFSET);
+            e.remove(KEY_UPTIME_OFFSET);
             e.apply();
         }
 
@@ -115,14 +115,14 @@ final class Persistence implements SntpClient.SntpResponseListener {
 
         Log.d(TAG, String.format("Saving true time info to disk: " +
                                   "(sntp: [%s]; device: [%s]; clock: [%s])",
-                data.getSntpTime(),
-                data.getUptimeAtSntpTime(),
-                data.getSystemClockAtSntpTime()));
+                data.getRoundTripDelay(),
+                data.getUptimeOffset(),
+                data.getClockOffset()));
 
         SharedPreferences.Editor editor = sharedPrefs.edit();
-        editor.putLong(KEY_SNTP_TIME, data.getSntpTime());
-        editor.putLong(KEY_SYSTEM_CLOCK_TIME, data.getSystemClockAtSntpTime());
-        editor.putLong(KEY_DEVICE_UPTIME, data.getUptimeAtSntpTime());
+        editor.putLong(KEY_ROUND_TRIP_DELAY, data.getRoundTripDelay());
+        editor.putLong(KEY_SYSTEM_CLOCK_OFFSET, data.getClockOffset());
+        editor.putLong(KEY_UPTIME_OFFSET, data.getUptimeOffset());
         editor.apply();
     }
 

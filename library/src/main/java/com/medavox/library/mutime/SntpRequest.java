@@ -64,7 +64,7 @@ public final class SntpRequest {
         return this;
     }
 
-    public long[] send() throws IOException {
+    public TimeData send() throws IOException {
         return SNTP_CLIENT.requestTime(ntpHost,
                 _rootDelayMax,
                 _rootDispersionMax,

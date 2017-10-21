@@ -10,91 +10,91 @@ import java.util.Date;
  */
 class TimeData {
     private long sntpTime;
-    private long uptimeAtSntpTime;
-    private long systemClockAtSntpTime;
+    private long uptimeOffset;
+    private long clockOffset;
 
     /**Optional constructor. It's strongly recommended NOT TO USE THIS constructor,
      * as the 3 identical-type arguments can easily be mis-ordered.
      * @deprecated */
-    public TimeData(long sntpTime, long uptimeAtSntpTime, long systemClockAtSntpTime) {
+    public TimeData(long sntpTime, long uptimeOffset, long clockOffset) {
         this.sntpTime = sntpTime;
-        this.uptimeAtSntpTime = uptimeAtSntpTime;
-        this.systemClockAtSntpTime = systemClockAtSntpTime;
+        this.uptimeOffset = uptimeOffset;
+        this.clockOffset = clockOffset;
     }
 
     /**
      * time value computed from NTP server response
      */
-    public long getSntpTime() {
+    public long getRoundTripDelay() {
         return sntpTime;
     }
 
     /**
      * Device uptime corresponding to the SNTP time.
      * In other words, this is the value of {@link SystemClock#elapsedRealtime()} ()}
-     * at the time represented by {@link #getSntpTime()}.
+     * at the time represented by {@link #getRoundTripDelay()}.
      */
-    public long getUptimeAtSntpTime() {
-        return uptimeAtSntpTime;
+    public long getUptimeOffset() {
+        return uptimeOffset;
     }
 
     /**The System Clock value corresponding to the SNTP time.
      * In other words, this is the value of {@link System#currentTimeMillis()}
-     * at the time represented by {@link #getSntpTime()}.*/
-    public long getSystemClockAtSntpTime() {
-        return systemClockAtSntpTime;
+     * at the time represented by {@link #getRoundTripDelay()}.*/
+    public long getClockOffset() {
+        return clockOffset;
     }
 
     /**Optional Builder class.
      * Recommended because this prevents accidental mis-ordering of arguments.*/
     public static class Builder {
 
-        private long sntpTime;
-        private long uptimeAtSntpTime;
-        private long systemClockAtSntpTime;
+        private long roundTripDelay;
+        private long uptimeOffset;
+        private long systemClockOffset;
 
         public Builder() {
 
         }
 
         public Builder(TimeData existing) {
-            sntpTime = existing.getSntpTime();
-            uptimeAtSntpTime = existing.getUptimeAtSntpTime();
-            systemClockAtSntpTime = existing.getSystemClockAtSntpTime();
+            roundTripDelay = existing.getRoundTripDelay();
+            uptimeOffset = existing.getUptimeOffset();
+            systemClockOffset = existing.getClockOffset();
         }
 
-        public Builder sntpTime(long time) {
-            sntpTime = time;
+        public Builder roundTripDelay(long time) {
+            roundTripDelay = time;
             return this;
         }
 
-        public Builder uptimeAtSntpTime(long time) {
-            uptimeAtSntpTime = time;
+        public Builder uptimeOffset(long time) {
+            uptimeOffset = time;
             return this;
         }
 
-        public Builder systemClockAtSntpTime(long time) {
-            systemClockAtSntpTime = time;
+        public Builder systemClockOffset(long time) {
+            systemClockOffset = time;
             return this;
         }
 
         public TimeData build() {
-            if(sntpTime != 0 && uptimeAtSntpTime != 0 && systemClockAtSntpTime != 0) {
-                return new TimeData(sntpTime, uptimeAtSntpTime, systemClockAtSntpTime);
+            if(roundTripDelay != 0 && uptimeOffset != 0 && systemClockOffset != 0) {
+                return new TimeData(roundTripDelay, uptimeOffset, systemClockOffset);
             }
             else {
                 throw new IllegalArgumentException("All arguments must be set. Passed Values:"+
-                "sntpTime="+sntpTime+"; uptimeAtSntpTime="+uptimeAtSntpTime
-                        +"; systemClockAtSntpTime="+systemClockAtSntpTime);
+                "roundTripDelay="+ roundTripDelay +"; uptimeOffset="+ uptimeOffset
+                        +"; systemClockOffset="+ systemClockOffset);
             }
         }
     }
     @Override
     public String toString() {
         return "TimeData ["
-                +"SNTP Time: "+new Date(sntpTime)
-                +"; corresponding System Clock time: "+systemClockAtSntpTime
-                +"; corresponding uptime value: "+uptimeAtSntpTime
+                +"Round Trip Delay: "+new Date(sntpTime)
+                +"; System Clock offset from true time: "+ clockOffset
+                +"; Device Uptime offset from true time: "+ uptimeOffset
                 +"]";
     }
 }

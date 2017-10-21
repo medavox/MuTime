@@ -1,10 +1,13 @@
 package com.medavox.library.mutime;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.SystemClock;
 import android.util.Log;
+
+import java.io.IOException;
 
 /**Base class for accessing the MuTime API.
  * To get the actual time:
@@ -25,23 +28,17 @@ public class MuTime {
 
     private static TimeDataPreserver preserver = null;
     private static final String TAG = MuTime.class.getSimpleName();
-/*
-    public static MuTime getInstance(Context c) {
-        if(persistence == null) {
-            persistence = new Persistence(c);
-        }
-        if (INSTANCE == null) {
-            INSTANCE = new MuTime(persistence);
-        }
-        return INSTANCE;
-    }
-  */
+
     private MuTime() {
         throw new AssertionError("this class should not be instantiated");
     }
 
     /**Call this at least once to get reliable time from an NTP server.*/
-    public static SntpRequest requestTimeFromServer(String ntpHost) {
+    public static TimeData requestTimeFromServer(String ntpHost) throws IOException {
+        return new SntpRequest(ntpHost, persistence).send();
+    }
+
+    public static SntpRequest buildCustomSntpRequest(String ntpHost) {
         return new SntpRequest(ntpHost, persistence);
     }
 
@@ -64,29 +61,26 @@ public class MuTime {
      * </p>
      * <pre>
      * {@code
-     *  private AsyncTask<Context, Void, Void> makeRequest = new AsyncTask<Context, Void, Void>() {
-            private final static String TAG = "MuTime Process";
+     *  new Thread(){
             @Override
-            protected Void doInBackground(Context... c) {
-                String server = "time.google.com";
+            public void run() {
+                Log.i(TAG, "trying to get the time...");
+                MuTime.enableDiskCaching(MainActivity.this);
                 try {
-                    MuTimeRx t = MuTimeRx.getInstance(c[0]);
-                    if(MuTime.hasTheTime()) {
-                        Log.i(TAG, "Using stored time:"+new Date(t.now()));
-                    }
-                    else {
-                        Log.i(TAG, "Requesting time from " + server + "...");
-                        t.requestTimeFromServer(server);
-                        Log.i(TAG, "time gotten:" + new Date(t.now()));
-                    }
+                    MuTime.requestTimeFromServer("time.google.com");
                 }
-                catch(Exception e) {
-                    Log.e(TAG, "Failed to get time from "+server+"; exception:"+e);
-                    e.printStackTrace();
+                catch(IOException ioe) {
+                    Log.e(TAG, "network error while getting the time:"+ioe);
                 }
-                return null;
+                //...
+                try {
+                    Log.i(TAG, "time gotten:"+new Date(MuTime.now()));
+                }
+                catch (MissingTimeDataException mtde) {
+                    Log.e(TAG, mtde.toString());
+                }
             }
-        };
+        }.start();
         //...
         //from an activity:
         makeRequest.execute(this);
@@ -107,10 +101,19 @@ public class MuTime {
                     "MuTime.requestTimeFromServer(String) to refresh the true time");
         }
 
-        long cachedSntpTime = timeData.getSntpTime();
-        long cachedDeviceUptime = timeData.getUptimeAtSntpTime();
+        //these values should be identical, or near as dammit
+        long timeFromUptime = SystemClock.elapsedRealtime() + timeData.getUptimeOffset();
+        long timeFromClock = System.currentTimeMillis() + timeData.getClockOffset();
 
-        return cachedSntpTime + (SystemClock.elapsedRealtime() - cachedDeviceUptime);
+        //10ms is probably quite lenient
+        if(Math.abs(timeFromClock - timeFromUptime) > 10) {
+            throw new MissingTimeDataException("offsets for clocks did not agree on the time - " +
+                    "offset from uptime makes it "+timeFromUptime+", " +
+                    "but the offset from the clock makes it "+timeFromClock);
+
+
+        }
+        return timeFromClock;
     }
 
     /**Enable the use of {@link android.content.SharedPreferences}
