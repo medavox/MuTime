@@ -13,3 +13,4 @@ config.xml
 secure.properties
 tmp/
 build.properties
+settings.gradle
