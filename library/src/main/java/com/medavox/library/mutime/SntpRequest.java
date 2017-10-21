@@ -27,12 +27,12 @@ public final class SntpRequest {
         this.listener = listener;
     }
 
-    public SntpRequest withConnectionTimeout(int timeoutInMillis) {
+    public SntpRequest connectionTimeout(int timeoutInMillis) {
         _udpSocketTimeoutInMillis = timeoutInMillis;
         return this;
     }
 
-    public SntpRequest withRootDelayMax(float rootDelayMax) {
+    public SntpRequest rootDelayMax(float rootDelayMax) {
         if (rootDelayMax > _rootDelayMax) {
             String log = String.format(Locale.getDefault(),
                     "The recommended max rootDelay value is %f. You are setting it at %f",
@@ -44,7 +44,7 @@ public final class SntpRequest {
         return this;
     }
 
-    public SntpRequest withRootDispersionMax(float rootDispersionMax) {
+    public SntpRequest rootDispersionMax(float rootDispersionMax) {
         if (rootDispersionMax > _rootDispersionMax) {
             Log.w(TAG, String.format(Locale.getDefault(),
                     "The recommended max rootDispersion value is %f. You are setting it at %f",
@@ -56,7 +56,7 @@ public final class SntpRequest {
         return this;
     }
 
-    public SntpRequest withServerResponseDelayMax(int serverResponseDelayInMillis) {
+    public SntpRequest serverResponseDelayMax(int serverResponseDelayInMillis) {
         _serverResponseDelayMax = serverResponseDelayInMillis;
         return this;
     }
