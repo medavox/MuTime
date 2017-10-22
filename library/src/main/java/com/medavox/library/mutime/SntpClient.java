@@ -57,8 +57,7 @@ class SntpClient {
                                        float rootDelayMax,
                                        float rootDispersionMax,
                                        int serverResponseDelayMax,
-                                       int timeout,
-                                       SntpResponseListener listener) throws IOException {
+                                       int timeout) throws IOException {
         Log.d(TAG, "requesting the time from "+ntpHost+"...");
         DatagramSocket socket = null;
 
@@ -167,7 +166,6 @@ class SntpClient {
                     .uptimeOffset(uptimeOffset)
                     .roundTripDelay(roundTripDelay)
                     .build();
-            listener.onSntpTimeData(td);
             Log.i(TAG, "---- SNTP successful response from " + ntpHost);
             return td;
         } catch (Exception e) {

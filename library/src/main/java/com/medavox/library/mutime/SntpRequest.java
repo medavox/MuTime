@@ -65,11 +65,14 @@ public final class SntpRequest {
     }
 
     public TimeData send() throws IOException {
-        return SNTP_CLIENT.requestTime(ntpHost,
+        TimeData td = SNTP_CLIENT.requestTime(ntpHost,
                 _rootDelayMax,
                 _rootDispersionMax,
                 _serverResponseDelayMax,
-                _udpSocketTimeoutInMillis,
-                listener);
+                _udpSocketTimeoutInMillis);
+        if(listener != null) {
+            listener.onSntpTimeData(td);
+        }
+        return td;
     }
 }
