@@ -1,1 +1,1 @@
-include ':library', ':library-rx'
+include ':library'
