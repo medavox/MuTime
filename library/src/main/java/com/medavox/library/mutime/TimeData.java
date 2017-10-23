@@ -2,22 +2,20 @@ package com.medavox.library.mutime;
 
 import android.os.SystemClock;
 
-import java.util.Date;
-
 /**
  * @author Adam Howard
  * created on 16/10/17.
  */
 class TimeData {
-    private long sntpTime;
+    private long roundTripDelay;
     private long uptimeOffset;
     private long clockOffset;
 
     /**Optional constructor. It's strongly recommended NOT TO USE THIS constructor,
      * as the 3 identical-type arguments can easily be mis-ordered.
      * @deprecated */
-    public TimeData(long sntpTime, long uptimeOffset, long clockOffset) {
-        this.sntpTime = sntpTime;
+    public TimeData(long roundTripDelay, long uptimeOffset, long clockOffset) {
+        this.roundTripDelay = roundTripDelay;
         this.uptimeOffset = uptimeOffset;
         this.clockOffset = clockOffset;
     }
@@ -26,7 +24,7 @@ class TimeData {
      * time value computed from NTP server response
      */
     public long getRoundTripDelay() {
-        return sntpTime;
+        return roundTripDelay;
     }
 
     /**
@@ -92,9 +90,9 @@ class TimeData {
     @Override
     public String toString() {
         return "TimeData ["
-                +"Round Trip Delay: "+new Date(sntpTime)
-                +"; System Clock offset from true time: "+ clockOffset
-                +"; Device Uptime offset from true time: "+ uptimeOffset
+                +"Round Trip Delay: "+ roundTripDelay
+                +"; System Clock offset: "+ clockOffset
+                +"; Device Uptime offset: "+ uptimeOffset
                 +"]";
     }
 }
