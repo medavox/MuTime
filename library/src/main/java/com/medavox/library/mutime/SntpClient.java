@@ -97,10 +97,10 @@ class SntpClient {
             long receiveTime = readTimeStamp(buffer, INDEX_RECEIVE_TIME);         // T1
             long transmitTime = readTimeStamp(buffer, INDEX_TRANSMIT_TIME);       // T2
 
-            long responseTime = clockAtRequest + (uptimeAtResponse - uptimeAtRequest);//T3
-            long differenceBetweenCalculatedAndClock = responseTime - clockAtResponse;
-            Log.v(TAG, "difference between calculated responseTime and equivalent System Clock value: "+
-            differenceBetweenCalculatedAndClock);
+            //long responseTime = clockAtRequest + (uptimeAtResponse - uptimeAtRequest);//T3
+            //long differenceBetweenCalculatedAndClock = responseTime - clockAtResponse;
+            //Log.v(TAG, "difference between calculated responseTime and equivalent System Clock value: "+
+            //differenceBetweenCalculatedAndClock);
 
             // -----------------------------------------------------------------------------------
             // check validity of response
@@ -170,7 +170,7 @@ class SntpClient {
             return td;
         } catch (Exception e) {
             Log.e(TAG, "SNTP request failed for " + ntpHost+": "+e);
-            e.printStackTrace();
+            //e.printStackTrace();
             throw e;
         } finally {
             if (socket != null) {
