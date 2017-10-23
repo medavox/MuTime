@@ -17,11 +17,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 public class Ntp {
 
     private static final String TAG = Ntp.class.getSimpleName();
-    private static final SntpClient client = new SntpClient();
 
     private static int _repeatCount = 5;
-
-    private int _retryCount = 20;
 
     private static class StringToTimeDataThread extends Thread {
         private String ntpHost;
@@ -46,7 +43,6 @@ public class Ntp {
      * See https://github.com/instacart/truetime-android/issues/42
      * to understand why you may want to do something like this.
      *
-     * @param resolvedNtpAddresses list of resolved IP addresses for an NTP request
      * @return Observable of detailed long[] containing most important parts of the actual NTP response
      * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
      */
@@ -79,7 +75,7 @@ public class Ntp {
         ParallelProcess<String, InetAddress[]> wnr = new ParallelProcess<>(ntpPoolAddresses, allResults);
         wnr.doWork(new ParallelProcess.Worker<String, InetAddress[]>() {
             @Override public void performProcess(String input, InetAddress[] output) {
-                output = resolveMultipleNtpHosts(input);
+                output = resolveNtpPoolToIpAddresses(input);
             }
         });
         wnr.waitTillFinished();
@@ -100,10 +96,6 @@ public class Ntp {
     /**Initialize MuTime
      * A single NTP pool server is provided.
      * Using DNS we resolve that to multiple IP hosts
-     * (See {@link #initializeNtp(InetAddress...)} for manually resolved IPs)
-     *
-     * Use this instead of {@link #initializeRx(String)} if you wish to also get additional info for
-     * instrumentation/tracking actual NTP response data
      *
      * @param ntpPoolAddress NTP pool server e.g. time.apple.com, 0.us.pool.ntp.org
      * @return an array of reachable IP addresses which map to the given ntp pool address
