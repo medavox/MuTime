@@ -1,54 +1,60 @@
 package com.medavox.library.mutime;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by scc on 21/10/17.
  */
 class ParallelProcess<In, Out> extends Thread {
     private int numThreads = -1;
-    private Thread[] threads;
+    private List<InternalWrapper> threads;
     private In inputSingle = null;
     private In[] inputArray = null;
-    private Out[] output;
     private boolean arrayInputMode;
 
-    public ParallelProcess(In[] input, Out[] output) {
-        if (input.length != output.length) {
-            throw new IllegalArgumentException("input array length must match output array length");
-        }
+    public ParallelProcess(In[] input) {
         arrayInputMode = true;
         this.inputArray = input;
-        this.output = output;
         numThreads = input.length;
     }
 
-    public ParallelProcess(In input, Out[] output) {
+    public ParallelProcess(In input, int numberOfThreads) {
         this.inputSingle = input;
-        this.output = output;
         arrayInputMode = false;
-        numThreads = output.length;
+        numThreads = numberOfThreads;
     }
 
-    public void doWork(Worker smug) {
-        threads = new Thread[numThreads];
+
+    public void doWork(Worker<In, Out> smug) {
+        threads = new ArrayList<InternalWrapper>(numThreads);
         if(arrayInputMode) {
-            for (int i = 0; i < threads.length; i++) {
-                threads[i] = new Wrapper(inputArray[i], output[i], smug);
-                threads[i].start();
+            for (int i = 0; i < inputArray.length; i++) {
+                InternalWrapper iw = new InternalWrapper(inputArray[i], smug);
+                threads.add(i, iw);
+                iw.start();
             }
         }
         else {
-            for (int i = 0; i < threads.length; i++) {
-                threads[i] = new Wrapper(inputSingle, output[i], smug);
-                threads[i].start();
+            for (int i = 0; i < numThreads; i++) {
+                InternalWrapper iw = new InternalWrapper(inputSingle, smug);
+                threads.add(i, iw);
+                iw.start();
             }
         }
     }
 
-    public void waitTillFinished() {
-        for (Thread t : threads) {
+    public void collectOutputWhenFinished(Out[] output) {
+        if(output.length != numThreads) {
+            throw new IllegalArgumentException("Supplied output array length must match number of" +
+                " threads. Number of threads: "+numThreads+"; output array length: "+output.length);
+        }
+        for (int i = 0; i < threads.size(); i++) {
             try {
+                InternalWrapper t = threads.get(i);
                 if(t != null) {
                     t.join();
+                    output[i] = t.getOutput();
                 }
             } catch (InterruptedException ie) {
                 System.err.println("" + ie);
@@ -57,23 +63,26 @@ class ParallelProcess<In, Out> extends Thread {
         }
     }
 
-    private class Wrapper extends Thread {
+    private class InternalWrapper extends Thread {
         private In in;
         private Out out;
-        private Worker worker;
-        public Wrapper(In inn, Out aus, Worker worker) {
+        private Worker<In, Out> worker;
+        public InternalWrapper(In inn, Worker<In, Out> worker) {
             in = inn;
-            out = aus;
             this.worker = worker;
         }
         @Override
         public void run() {
             super.run();
-            worker.performProcess(in, out);
+            out = worker.performWork(in);
+        }
+
+        public Out getOutput() {
+            return out;
         }
     }
 
     public interface Worker<In, Out> {
-        void performProcess(In input, Out output);
+        Out performWork(In input);
     }
 }

@@ -17,13 +17,42 @@ import java.util.concurrent.ConcurrentSkipListSet;
 public class Ntp {
 
     private static final String TAG = Ntp.class.getSimpleName();
+    private static int _repeatCount = 4;
 
-    private static int _repeatCount = 5;
+    private static Comparator<TimeData> clockOffsetSorter = new Comparator<TimeData>() {
+        @Override
+        public int compare(TimeData lhsParam, TimeData rhsParam) {
+            long lhs = lhsParam.getClockOffset();
+            long rhs = rhsParam.getClockOffset();
+            return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
+        }
+    };
+
+    private static SntpClient.SntpResponseListener dynamicCollater = new SntpClient.SntpResponseListener() {
+        private Set<TimeData> timeDatas = new ConcurrentSkipListSet<>(clockOffsetSorter);
+
+        /**Each time we receive new data, recalculate the median offset
+         * and send the results to persistence*/
+        @Override
+        public void onSntpTimeData(TimeData data) {
+            if (data != null) {
+                timeDatas.add(data);
+                TimeData[] asArray = new TimeData[timeDatas.size()];
+                //Returns the NTP response with the median value for clock offset
+                TimeData[] sortedResponses = timeDatas.toArray(asArray);
+                Arrays.sort(sortedResponses, clockOffsetSorter);
+                TimeData newMedian = sortedResponses[sortedResponses.length / 2];
+                Log.d(TAG, "new median time:"+newMedian);
+                MuTime.persistence.onSntpTimeData(newMedian);
+            }
+        }
+    };
 
     private static class StringToTimeDataThread extends Thread {
-        private String ntpHost;
-        private SntpClient.SntpResponseListener listener;
 
+        private String ntpHost;
+
+        private SntpClient.SntpResponseListener listener;
         StringToTimeDataThread(String ntpHost, SntpClient.SntpResponseListener listener) {
             this.ntpHost = ntpHost;
             this.listener = listener;
@@ -32,8 +61,10 @@ public class Ntp {
         @Override
         public void run() {
             TimeData bestResponse = bestResponseAgainstSingleIp(_repeatCount, ntpHost);
+            Log.v(TAG, "got time data \""+bestResponse+"\" from "+ntpHost);
             listener.onSntpTimeData(bestResponse);
         }
+
     }
 
     /**
@@ -54,31 +85,15 @@ public class Ntp {
         }
     }
 
-    private static SntpClient.SntpResponseListener dynamicCollater = new SntpClient.SntpResponseListener() {
-        private Set<TimeData> timeDatas = new ConcurrentSkipListSet(clockOffsetSorter);
-
-        /**Each time we receive new data, recalculate the median offset
-         * and send the results to persistence*/
-        @Override
-        public void onSntpTimeData(TimeData data) {
-            if (data != null) {
-                timeDatas.add(data);
-                TimeData[] asArray = new TimeData[timeDatas.size()];
-                TimeData newMedian = filterMedianResponse(timeDatas.toArray(asArray));
-                MuTime.persistence.onSntpTimeData(newMedian);
-            }
-        }
-    };
-
     public static InetAddress[] resolveMultipleNtpHosts(final String... ntpPoolAddresses) {
         final InetAddress[][] allResults = new InetAddress[ntpPoolAddresses.length][];
-        ParallelProcess<String, InetAddress[]> wnr = new ParallelProcess<>(ntpPoolAddresses, allResults);
+        ParallelProcess<String, InetAddress[]> wnr = new ParallelProcess<>(ntpPoolAddresses);
         wnr.doWork(new ParallelProcess.Worker<String, InetAddress[]>() {
-            @Override public void performProcess(String input, InetAddress[] output) {
-                output = resolveNtpPoolToIpAddresses(input);
+            @Override public InetAddress[] performWork(String input) {
+                return resolveNtpPoolToIpAddresses(input);
             }
         });
-        wnr.waitTillFinished();
+        wnr.collectOutputWhenFinished(allResults);
         Set<InetAddress> asSet = new HashSet<>();
         for(InetAddress[] array : allResults) {
             if(array != null) {
@@ -130,18 +145,19 @@ public class Ntp {
     private static TimeData bestResponseAgainstSingleIp(final int repeatCount, String ntpHost) {
         TimeData[] responses = new TimeData[repeatCount];
         ParallelProcess<String, TimeData> para
-                = new ParallelProcess<String, TimeData>(ntpHost, responses);
+                = new ParallelProcess<String, TimeData>(ntpHost, repeatCount);
         para.doWork(new ParallelProcess.Worker<String, TimeData>() {
             @Override
-            public void performProcess(String ntpHost, TimeData result) {
+            public TimeData performWork(String ntpHost) {
                 try {
-                    result = new SntpRequest(ntpHost, null).send();
+                    return new SntpRequest(ntpHost, null).send();
                 } catch (IOException ioe) {
                     Log.w(TAG, "request to \"" + ntpHost + "\" failed:" + ioe);
                 }
+                return null;
             }
         });
-        para.waitTillFinished();
+        para.collectOutputWhenFinished(responses);
 
         return filterLeastRoundTripDelay(responses);
     }
@@ -153,6 +169,7 @@ public class Ntp {
         long bestRoundTrip = Long.MAX_VALUE;
         int bestIndex = -1;
         for (int i = 0; i < responseTimeList.length; i++) {
+            //Log.v(TAG, "response "+(i+1)+" of "+responseTimeList.length+": "+responseTimeList[i]);
             if (responseTimeList[i] != null &&
                     responseTimeList[i].getRoundTripDelay() < bestRoundTrip) {
                 bestRoundTrip = responseTimeList[i].getRoundTripDelay();
@@ -160,23 +177,6 @@ public class Ntp {
             }
         }
         return responseTimeList[bestIndex];
-    }
-
-    private static Comparator<TimeData> clockOffsetSorter = new Comparator<TimeData>() {
-        @Override
-        public int compare(TimeData lhsParam, TimeData rhsParam) {
-            long lhs = lhsParam.getClockOffset();
-            long rhs = rhsParam.getClockOffset();
-            return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
-        }
-    };
-
-    /**
-     * Takes a list of NTP responses, and returns the one with the median value for clock offset
-     */
-    private static TimeData filterMedianResponse(TimeData... bestResponses) {
-        Arrays.sort(bestResponses, clockOffsetSorter);
-        return bestResponses[bestResponses.length / 2];
     }
 
     private static boolean isReachable(InetAddress addr) {
