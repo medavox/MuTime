@@ -106,18 +106,14 @@ final class Persistence implements SntpClient.SntpResponseListener {
      * and into SharedPreferences.*/
     @Override
     public void onSntpTimeData(TimeData data) {
-        Log.d(TAG, "got time info:"+data);
+        Log.i(TAG, "got time info:"+data);
         timeData = data;
 
         if (!sharedPreferencesAvailable()) {
             return;
         }
 
-        Log.d(TAG, String.format("Saving true time info to disk: " +
-                                  "(sntp: [%s]; device: [%s]; clock: [%s])",
-                data.getRoundTripDelay(),
-                data.getUptimeOffset(),
-                data.getClockOffset()));
+        Log.d(TAG, "Saving true time info to disk: " + data);
 
         SharedPreferences.Editor editor = sharedPrefs.edit();
         editor.putLong(KEY_ROUND_TRIP_DELAY, data.getRoundTripDelay());

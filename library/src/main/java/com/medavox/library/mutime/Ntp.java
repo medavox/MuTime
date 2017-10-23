@@ -78,6 +78,8 @@ public class Ntp {
      * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
      */
     public static void performNtpAlgorithm(InetAddress... addresses) {
+        Log.i(TAG, "Getting the time from "+addresses.length+" IP addresses: "
+                +Arrays.toString(addresses)+"...");
         for (InetAddress address : addresses) {
             String ntpHost = address.getHostAddress();
             StringToTimeDataThread doer = new StringToTimeDataThread(ntpHost, dynamicCollater);
