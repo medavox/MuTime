@@ -28,9 +28,11 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.medavox.mutime:library-extension-rx:<release-version>'
+    compile 'com.github.medavox.MuTime:<release-version>'
 }
 ```
+
+The current release version is `v0.3`.
 
 # Usage
 
