@@ -34,8 +34,8 @@ public class MuTime {
     }
 
     /**Call this at least once to get reliable time from an NTP server.*/
-    public static TimeData requestTimeFromServer(String ntpHost) throws IOException {
-        return new SntpRequest(ntpHost, persistence).send();
+    public static void requestTimeFromServer(String ntpHost) throws IOException {
+        new SntpRequest(ntpHost, persistence).send();
     }
 
     public static SntpRequest buildCustomSntpRequest(String ntpHost) {

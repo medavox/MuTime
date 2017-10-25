@@ -19,6 +19,26 @@ public class Ntp {
     private static final String TAG = Ntp.class.getSimpleName();
     private static int _repeatCount = 4;
 
+    /**
+     * Initialize MuTime
+     * Use this if you want to resolve the NTP Pool address to individual IPs yourself
+     * <p>
+     * See https://github.com/instacart/truetime-android/issues/42
+     * to understand why you may want to do something like this.
+     *
+     * @return Observable of detailed long[] containing most important parts of the actual NTP response
+     * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
+     */
+    public static void performNtpAlgorithm(InetAddress... addresses) {
+        Log.i(TAG, "Getting the time from "+addresses.length+" IP addresses: "
+                +Arrays.toString(addresses)+"...");
+        for (InetAddress address : addresses) {
+            String ntpHost = address.getHostAddress();
+            StringToTimeDataThread doer = new StringToTimeDataThread(ntpHost, dynamicCollater);
+            doer.start();
+        }
+    }
+
     private static Comparator<TimeData> clockOffsetSorter = new Comparator<TimeData>() {
         @Override
         public int compare(TimeData lhsParam, TimeData rhsParam) {
@@ -51,8 +71,8 @@ public class Ntp {
     private static class StringToTimeDataThread extends Thread {
 
         private String ntpHost;
-
         private SntpClient.SntpResponseListener listener;
+
         StringToTimeDataThread(String ntpHost, SntpClient.SntpResponseListener listener) {
             this.ntpHost = ntpHost;
             this.listener = listener;
@@ -65,26 +85,6 @@ public class Ntp {
             listener.onSntpTimeData(bestResponse);
         }
 
-    }
-
-    /**
-     * Initialize MuTime
-     * Use this if you want to resolve the NTP Pool address to individual IPs yourself
-     * <p>
-     * See https://github.com/instacart/truetime-android/issues/42
-     * to understand why you may want to do something like this.
-     *
-     * @return Observable of detailed long[] containing most important parts of the actual NTP response
-     * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
-     */
-    public static void performNtpAlgorithm(InetAddress... addresses) {
-        Log.i(TAG, "Getting the time from "+addresses.length+" IP addresses: "
-                +Arrays.toString(addresses)+"...");
-        for (InetAddress address : addresses) {
-            String ntpHost = address.getHostAddress();
-            StringToTimeDataThread doer = new StringToTimeDataThread(ntpHost, dynamicCollater);
-            doer.start();
-        }
     }
 
     public static InetAddress[] resolveMultipleNtpHosts(final String... ntpPoolAddresses) {
@@ -154,7 +154,7 @@ public class Ntp {
                 try {
                     return new SntpRequest(ntpHost, null).send();
                 } catch (IOException ioe) {
-                    Log.w(TAG, "request to \"" + ntpHost + "\" failed:" + ioe);
+                    //Log.w(TAG, "request to \"" + ntpHost + "\" failed: " + ioe);
                 }
                 return null;
             }
