@@ -28,7 +28,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.medavox.MuTime:<release-version>'
+    compile 'com.github.medavox:MuTime:<release-version>'
 }
 ```
 
