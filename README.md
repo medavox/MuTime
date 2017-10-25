@@ -14,14 +14,94 @@ Your application or service may want a date that is unaffected by these changes 
 
 You can read more about the use case in Instacart's [blog post](https://tech.instacart.com/truetime/).
 
-In a [recent conference talk](https://vimeo.com/190922794), 
-instacart explained how the full NTP implementation works with Rx.
-Check the [video](https://vimeo.com/190922794) and 
-[slides](https://speakerdeck.com/kaushikgopal/learning-rx-by-example-2?slide=31) out for implementation details.
+# Installation
+
+We use [Jitpack](https://jitpack.io) to host the library.
+
+Add this to your application's `build.gradle` file:
+
+```groovy
+repositories {
+    maven {
+        url "https://jitpack.io"
+    }
+}
+
+dependencies {
+    compile 'com.github.medavox.mutime:library-extension-rx:<release-version>'
+}
+```
+
+# Usage
+
+## Simple (SNTP) version
+
+```java
+//optionally enable the disk cache
+MuTime.enableDiskCaching(/*Context*/ this);//this hardens MuTime against clock changes and reboots
+
+MuTime.requestTimeFromServer("time.google.com");//use any ntp server address here, eg "time.apple.com"
+
+//get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
+try {
+    long theActualTime = MuTime.now();//throws MissingTimeDataException if we don't know the time
+}
+catch (MissingTimeDataException e) {
+    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
+}
+```
+
+`requestTimeFromServer(String)` must be run on a background thread. 
+If you run it on the main (UI) thread, you will get a
+[`NetworkOnMainThreadException`](https://developer.android.com/reference/android/os/NetworkOnMainThreadException.html)
+
+
+## Complex (NTP) Version
+
+If you use the [Ntp](https://github.com/medavox/MuTime/blob/master/library/src/main/java/com/medavox/library/mutime/Ntp.java) class then you get full NTP.
+
+Use the `performNtpAlgorithm(InetAddress...)` method, or alternatively resolve an [NTP pool](https://en.wikipedia.org/wiki/NTP_pool) server to `Inetaddress`es automatically with `resolveNtpPoolToIpAddresses(String)`. You can even resolve multiple NTP servers with `resolveMultipleNtpHosts(String...)`.
+
+```java
+
+//gather NTP data from multiple hosts
+Ntp.performNtpAlgorithm(Ntp.resolveMultipleNtpHosts("pool.ntp.org", "time.google.com", "time.apple.com") );
+
+```
+
+Now, as before:
+
+```java
+try {
+    long theActualTime = mu.now();//throws MissingTimeDataException if we don't know the time
+}
+catch (MissingTimeDataException e) {
+    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
+}
+```
+
+# How is the true time calculated?
+
+It's pretty simple actually. We make a request to an NTP server that gives us the actual time.
+We then establish the delta between device uptime and uptime at the time of the network response.
+On each subsequent request for the true time "now", we compute the correct time from that offset.
+
+Once we have this offset information, it's valid until the next time you boot your device.
+This means if you enable the disk caching feature, after a single successful NTP request you can
+use the information on-disk directly without ever making another network request.
+This applies even across application kills -- which can happen frequently if a user has a memory starved device.
+
+## Why Use The Ntp Class Instead of MuTime?
+
+* Implements the full NTP, as opposed to the more basic SNTP (read: far more accurate time)
+* The NTP pool address you provide is resolved into multiple IP addresses
+* We query each IP multiple times, guarding against checks, and take the best response
+* We collect all the responses and again filter for the best result as per the NTP spec
+* Allows you to query multiple, independent NTP server, eg time.google.com and time.apple.com
 
 # Reason For Fork
 
-[I](https://github.com/medavox/) needed a way of providing reliable time for an app I'm working on,
+[I](https://github.com/medavox/) needed a way of providing reliable time for another app,
 preserving the correct time across 1) android clock adjustments by the user and 2) device reboots.
 Although the NTP client implementation in [TrueTime](https://github.com/instacart/truetime-android)'s
 library is more sophisticated than Google's hidden Android 
@@ -38,107 +118,11 @@ MuTime implements a more 'stubborn'
 solution, which preserves information about the correct time even after clock changes and device reboots.
 It's a beefed-up version of TrueTime's Disk Cache functionality.
 
-The public API has been revamped somewhat (and the underlying codebase largely rewritten),
+The public API has been revampe, and the underlying codebase largely rewritten,
 to improve maintainability (in my humble opinion).
 
 
-# How is the true time calculated?
-
-It's pretty simple actually. We make a request to an NTP server that gives us the actual time.
-We then establish the delta between device uptime and uptime at the time of the network response.
-On each subsequent request for the true time "now", we compute the correct time from that offset.
-
-Once we have this offset information, it's valid until the next time you boot your device.
-This means if you enable the disk caching feature, after a single successful NTP request you can
-use the information on disk directly without ever making another network request.
-This applies even across application kills which can happen frequently if your users have a memory starved device.
-
-# Installation
-
-We use [Jitpack](https://jitpack.io) to host the library.
-
-Add this to your application's `build.gradle` file:
-
-```groovy
-repositories {
-    maven {
-        url "https://jitpack.io"
-    }
-}
-
-dependencies {
-    // ...
-    compile 'com.github.medavox.mutime:library-extension-rx:<release-version>'
-
-    // or if you want the vanilla, SNTP-only version of Mutime:
-    compile 'com.github.medavox.mutime:library:<release-version>'
-}
-```
-
-# Usage
-
-## Vanilla version
-
-```java
-MuTime mu = MuTime.getInstance(ctx);//initialise our singleton
-
-boolean doWeKnowWhatTheRealTimeIsYet = MuTime.hasTheTime();//false -- no!
-//calling mu.now() or mu.nowAsDate() at this point would cause a MissingTimeDataException
-
-mu.requestTimeFromServer("time.google.com");//use any ntp server address here, eg "time.apple.com"
-boolean doWeKnowTheTimeNow = MuTime.hasTheTime();//true -- yes!
-
-//get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
-try {
-    long theActualTime = mu.now();//throws MissingTimeDataException if we don't know the time
-}
-catch (Exception e) {
-    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
-}
-```
-
-`requestTimeFromServer(String)` must be run on a background thread. 
-If you run it on the main (UI) thread, you will get a
-[`NetworkOnMainThreadException`](https://developer.android.com/reference/android/os/NetworkOnMainThreadException.html)
-
-
-## Rx Version
-
-If you use the [RxJava](https://github.com/ReactiveX/RxJava) version then we go all the way 
-and implement the full NTP. Use the nifty `initializeRx()` method which takes an 
-[NTP pool](https://en.wikipedia.org/wiki/NTP_pool) server host.
-
-```java
-MuTimeRx.build()
-        .initializeRx("time.google.com")
-        .subscribeOn(Schedulers.io())
-        .subscribe(date -> {
-            Log.v(TAG, "MuTime was initialized and we have a time: " + date);
-        }, throwable -> {
-            throwable.printStackTrace();
-        });
-```
-
-Now, as before:
-
-```java
-try {
-    long theActualTime = mu.now();//throws MissingTimeDataException if we don't know the time
-}
-catch (Exception e) {
-    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
-}
-```
-
-### What is nifty about the Rx version?
-
-* Implements the full NTP, as opposed to the more basic SNTP (read: far more accurate time)
-* The NTP pool address you provide is resolved into multiple IP addresses
-* We query each IP multiple times, guarding against checks, and take the best response
-* If any of the requests fail, we retry that failed request (alone) for a specified number of times
-* We collect all the responses and again filter for the best result as per the NTP spec
-
-## Notes/tips:
+# Notes/tips:
 
 * Each `requestTimeFromServer(String)` call makes an SNTP network request.
 MuTime needs to do this only once -- barring any , if you use MuTime's `withSharedPreferences`
