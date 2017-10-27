@@ -12,6 +12,8 @@ Users may do this for a variety of reasons, like being in different timezones,
 trying to be punctual by setting their clocks 5 – 10 minutes early, etc.
 Your application or service may want a date that is unaffected by these changes and reliable as a source of truth. MuTime gives you that.
 
+Originally a fork, now a major rewrite of [Instacart's](https://tech.instacart.com/) [TrueTime](https://github.com/instacart/truetime-android) library.
+
 You can read more about the use case in Instacart's [blog post](https://tech.instacart.com/truetime/).
 
 # Installation
