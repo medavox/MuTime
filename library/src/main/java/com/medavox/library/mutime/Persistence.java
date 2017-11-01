@@ -50,7 +50,7 @@ final class Persistence implements SntpClient.SntpResponseListener {
      * or null if no data is available.*/
     TimeData getTimeData() {
         if (timeData == null) {
-            Log.i(TAG, "no time data in memory, attempting to retrieve from SharedPreferences...");
+            Log.w(TAG, "no time data in memory, attempting to retrieve from SharedPreferences...");
             if (!sharedPreferencesAvailable()) {
                 return null;
             }
@@ -79,7 +79,8 @@ final class Persistence implements SntpClient.SntpResponseListener {
 
         if(Math.abs(storedClocksDiff - liveClocksDiff) > 10/*milliseconds*/) {
             Log.e(TAG, "Time Data was found to be invalid when checked! " +
-                    "A fresh network request is required to compute the correct time.");
+                    "A fresh network request is required to compute the correct time. " +
+                    "Stored Clock difference: "+storedClocksDiff+"; live Clock difference: "+liveClocksDiff);
             //clear the invalid data
             timeData = null;
             SharedPreferences.Editor e = sharedPrefs.edit();
@@ -106,27 +107,29 @@ final class Persistence implements SntpClient.SntpResponseListener {
      * and into SharedPreferences.*/
     @Override
     public void onSntpTimeData(TimeData data) {
-        Log.i(TAG, "got time info:"+data);
-        timeData = data;
+        if(data != null) {
+            //Log.i(TAG, "got time info:"+data);
+            timeData = data;
 
-        if (!sharedPreferencesAvailable()) {
-            return;
+            if (!sharedPreferencesAvailable()) {
+                return;
+            }
+
+            Log.d(TAG, "Saving true time info to disk: " + data);
+
+            SharedPreferences.Editor editor = sharedPrefs.edit();
+            editor.putLong(KEY_ROUND_TRIP_DELAY, data.getRoundTripDelay());
+            editor.putLong(KEY_SYSTEM_CLOCK_OFFSET, data.getClockOffset());
+            editor.putLong(KEY_UPTIME_OFFSET, data.getUptimeOffset());
+            editor.apply();
         }
-
-        Log.d(TAG, "Saving true time info to disk: " + data);
-
-        SharedPreferences.Editor editor = sharedPrefs.edit();
-        editor.putLong(KEY_ROUND_TRIP_DELAY, data.getRoundTripDelay());
-        editor.putLong(KEY_SYSTEM_CLOCK_OFFSET, data.getClockOffset());
-        editor.putLong(KEY_UPTIME_OFFSET, data.getUptimeOffset());
-        editor.apply();
     }
 
     // -----------------------------------------------------------------------------------
 
     private boolean sharedPreferencesAvailable() {
         if (sharedPrefs == null) {
-            Log.w(TAG, "Context info is not provided, so SharedPreferences is null; Cannot interact with time data on-disk.");
+            Log.w(TAG, "SharedPreferences is null, cannot interact with SharedPreferences time data on-disk.");
             return false;
         }
         return true;
