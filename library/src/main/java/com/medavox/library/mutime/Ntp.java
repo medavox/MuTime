@@ -50,6 +50,7 @@ public class Ntp {
 
     private static SntpClient.SntpResponseListener dynamicCollater = new SntpClient.SntpResponseListener() {
         private Set<TimeData> timeDatas = new ConcurrentSkipListSet<>(clockOffsetSorter);
+        private TimeData oldMedian;
 
         /**Each time we receive new data, recalculate the median offset
          * and send the results to persistence*/
@@ -62,8 +63,11 @@ public class Ntp {
                 TimeData[] sortedResponses = timeDatas.toArray(asArray);
                 Arrays.sort(sortedResponses, clockOffsetSorter);
                 TimeData newMedian = sortedResponses[sortedResponses.length / 2];
-                Log.d(TAG, "new median time:"+newMedian);
-                MuTime.persistence.onSntpTimeData(newMedian);
+                if(!newMedian.equals(oldMedian)) {
+                    oldMedian = newMedian;
+                    Log.d(TAG, "new median time:" + newMedian);
+                    MuTime.persistence.onSntpTimeData(newMedian);
+                }
             }
         }
     };

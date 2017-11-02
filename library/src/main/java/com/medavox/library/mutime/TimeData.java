@@ -95,4 +95,20 @@ class TimeData {
                 +"; Device Uptime offset: "+ uptimeOffset
                 +"]";
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null) {
+            return false;
+        }
+        else if(obj instanceof TimeData) {
+            TimeData td = (TimeData)obj;
+            return td.getUptimeOffset() == uptimeOffset &&
+                    td.getClockOffset() == clockOffset &&
+                    td.getRoundTripDelay() == roundTripDelay;
+        }
+        else {
+            return false;
+        }
+    }
 }
