@@ -74,8 +74,8 @@ final class Persistence implements SntpClient.SntpResponseListener {
         //check that the difference between the the uptime and system clock timestamps
         //is the same in the TimeData and right now
         //(this checks to make sure the data is still valid)
-        long storedClocksDiff = timeData.getClockOffset() - timeData.getUptimeOffset();
-        long liveClocksDiff = System.currentTimeMillis() - SystemClock.elapsedRealtime();
+        long storedClocksDiff = Math.abs(timeData.getClockOffset() - timeData.getUptimeOffset());
+        long liveClocksDiff = Math.abs(System.currentTimeMillis() - SystemClock.elapsedRealtime());
 
         if(Math.abs(storedClocksDiff - liveClocksDiff) > 10/*milliseconds*/) {
             Log.e(TAG, "Time Data was found to be invalid when checked! " +
@@ -83,7 +83,7 @@ final class Persistence implements SntpClient.SntpResponseListener {
                     "stored clock offset: "+timeData.getClockOffset()+"; stored uptime offset: "+
                     timeData.getUptimeOffset()+"; live clock: "+System.currentTimeMillis()+
                     "; live uptime: "+SystemClock.elapsedRealtime()+
-                    "Stored Clock difference: "+storedClocksDiff+"; live Clock difference: "+liveClocksDiff);
+                    "; Stored Clock difference: "+storedClocksDiff+"; live Clock difference: "+liveClocksDiff);
             //clear the invalid data
             timeData = null;
             SharedPreferences.Editor e = sharedPrefs.edit();
