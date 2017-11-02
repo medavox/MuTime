@@ -79,7 +79,10 @@ final class Persistence implements SntpClient.SntpResponseListener {
 
         if(Math.abs(storedClocksDiff - liveClocksDiff) > 10/*milliseconds*/) {
             Log.e(TAG, "Time Data was found to be invalid when checked! " +
-                    "A fresh network request is required to compute the correct time. " +
+                    //"A fresh network request is required to compute the correct time. " +
+                    "stored clock offset: "+timeData.getClockOffset()+"; stored uptime offset: "+
+                    timeData.getUptimeOffset()+"; live clock: "+System.currentTimeMillis()+
+                    "; live uptime: "+SystemClock.elapsedRealtime()+
                     "Stored Clock difference: "+storedClocksDiff+"; live Clock difference: "+liveClocksDiff);
             //clear the invalid data
             timeData = null;
