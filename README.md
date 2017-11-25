@@ -182,6 +182,11 @@ We:-
 
 If you don't use MuTimeRx, you don't get these benefits.
 
+# Useful Links
+
+* [Good description of an NTP data packet](https://www.meinbergglobal.com/english/info/ntp-packet.htm)
+* [Another NTP data packet  description](http://networksorcery.com/enp/protocol/ntp.htm#Originate_timestamp)
+
 ----
 
 # License
