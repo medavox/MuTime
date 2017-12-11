@@ -34,7 +34,7 @@ dependencies {
 }
 ```
 
-The current release version is `v0.3`.
+The current release version is `v0.5`.
 
 # Usage
 
