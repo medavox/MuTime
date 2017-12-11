@@ -86,7 +86,9 @@ public class Ntp {
         public void run() {
             TimeData bestResponse = bestResponseAgainstSingleIp(_repeatCount, ntpHost);
             Log.v(TAG, "got time data \""+bestResponse+"\" from "+ntpHost);
-            listener.onSntpTimeData(bestResponse);
+            if(bestResponse != null) {
+                listener.onSntpTimeData(bestResponse);
+            }
         }
 
     }
@@ -146,7 +148,10 @@ public class Ntp {
     /**
      * Takes a single NTP host (as a String),
      * performs an SNTP request on it repeatCount number of times,
-     * and returns the single result with the lowest round-trip delay
+     * and returns the single result with the lowest round-trip delay.
+     *
+     * Returns null if none of the requests to the IP 1) return a successful response,
+     * or 2) meet the minimum NTP requirements (root delay, root dispersion, round-trip delay).
      */
     private static TimeData bestResponseAgainstSingleIp(final int repeatCount, String ntpHost) {
         TimeData[] responses = new TimeData[repeatCount];
@@ -169,7 +174,8 @@ public class Ntp {
     }
 
     /**
-     * Takes a List of NTP responses, and returns the one with the smallest round-trip delay
+     * Takes a List of NTP responses, and returns the one with the smallest round-trip delay.
+     * Returns null if all the passed TimeData objects are null.
      */
     private static TimeData filterLeastRoundTripDelay(TimeData... responseTimeList) {
         long bestRoundTrip = Long.MAX_VALUE;
@@ -181,6 +187,9 @@ public class Ntp {
                 bestRoundTrip = responseTimeList[i].getRoundTripDelay();
                 bestIndex = i;
             }
+        }
+        if(bestIndex == -1) {
+            return null;
         }
         return responseTimeList[bestIndex];
     }
