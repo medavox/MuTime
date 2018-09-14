@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by scc on 21/10/17.
+ * @author Adam Howard
+ * created on 21/10/17.
  */
 class ParallelProcess<In, Out> extends Thread {
     private int numThreads = -1;

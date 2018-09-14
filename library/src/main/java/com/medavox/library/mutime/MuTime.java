@@ -103,7 +103,7 @@ public class MuTime {
 
         //these values should be identical, or near as dammit
         long timeFromUptime = SystemClock.elapsedRealtime() + timeData.getUptimeOffset();
-        long timeFromClock = System.currentTimeMillis() + timeData.getClockOffset();
+        long timeFromClock = System.currentTimeMillis() + timeData.getSystemClockOffset();
 
         //10ms is probably quite lenient
         if(Math.abs(timeFromClock - timeFromUptime) > 10) {
@@ -120,7 +120,7 @@ public class MuTime {
      * to store time data across app closes, system reboots and system clock meddling.
      * @param c a Context object which is needed for accessing SharedPreferences*/
     public static void enableDiskCaching(Context c) {
-        persistence.enabledDiskCache(c);
+        persistence.enableDiskCache(c);
     }
 
     /**Disable storing of Time Data on-disk.

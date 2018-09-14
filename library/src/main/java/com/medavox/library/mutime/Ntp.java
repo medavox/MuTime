@@ -42,8 +42,8 @@ public class Ntp {
     private static Comparator<TimeData> clockOffsetSorter = new Comparator<TimeData>() {
         @Override
         public int compare(TimeData lhsParam, TimeData rhsParam) {
-            long lhs = lhsParam.getClockOffset();
-            long rhs = rhsParam.getClockOffset();
+            long lhs = lhsParam.getSystemClockOffset();
+            long rhs = rhsParam.getSystemClockOffset();
             return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
         }
     };

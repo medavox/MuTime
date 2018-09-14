@@ -3,6 +3,8 @@ package com.medavox.library.mutime;
 import java.io.IOException;
 import java.util.Locale;
 
+/**Thrown when an NTP server sends back an invalid response.
+ */
 public class InvalidNtpResponseException
       extends IOException {
 
@@ -18,13 +20,11 @@ public class InvalidNtpResponseException
         this.actualValue = 0F;
     }
 
-  /**Thrown when an NTP server sends back an invalid response
-   *
-   * @param message An informative message that api users can use to know what went wrong.
-   *                should contain {@link #property}, {@link #expectedValue} and
-   *                {@link #actualValue} as format specifiers (in that order)
-   * @param property  property that caused the invalid NTP response
-   */
+/***Constructs a new instance.
+ * @param message An informative message that api users can use to know what went wrong.
+ *                should contain {@link #property}, {@link #expectedValue} and
+ *                {@link #actualValue} as format specifiers (in that order)
+ * @param property  property that caused the invalid NTP response*/
   InvalidNtpResponseException(String message,
                               String property,
                               float actualValue,
