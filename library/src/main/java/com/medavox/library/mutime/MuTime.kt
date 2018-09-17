@@ -63,7 +63,7 @@ object MuTime {
      * @return Observable of detailed long[] containing most important parts of the actual NTP response
      * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
      */
-    fun requestNtpFromHosts(vararg ntpHosts:String) {
+    fun requestNtpFromServers(vararg ntpHosts:String) {
         Log.i(TAG, "Getting the time from ${ntpHosts.size} IP address(es): ${Arrays.toString(ntpHosts)}...")
 
         val para:ParallelProcess<String, Array<InetAddress>?> = ParallelProcess{
