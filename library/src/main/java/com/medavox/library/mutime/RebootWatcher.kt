@@ -13,7 +13,7 @@ import android.util.Log
  * to allow MuTime to correct its offsets against these events.
  */
 private const val TAG:String  = "TimeDataPreserver"
-internal class TimeDataPreserver(private val persistence:Persistence) : BroadcastReceiver() {
+class RebootWatcher : BroadcastReceiver() {
 
     /**Detects when one of the stored time stamps have been invalidated by user actions,
      * and repairs it using the intact timestamp
@@ -24,30 +24,31 @@ internal class TimeDataPreserver(private val persistence:Persistence) : Broadcas
      * then the uptime timestamp is used to calculate a new value for the system clock time stamp.
      * */
     override fun onReceive(context:Context, intent:Intent) {
-        val old = persistence.getTimeData()
+        val diskCache = DiskCache(context.getSharedPreferences(SHARED_PREFS_KEY, Context.MODE_PRIVATE))
+        val old = diskCache.getTimeData()
         Log.i(TAG, "action \""+intent.action+"\" detected. Repairing TimeData...")
         val clockNow = System.currentTimeMillis()
         val uptimeNow = SystemClock.elapsedRealtime()
         val trueTime:Long
         when(intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
-                //uptime can no longer be trusted
+                //uptime clock can no longer be trusted
 
                 trueTime = clockNow + old.systemClockOffset
                 val newUptimeOffset = trueTime -uptimeNow
 
                 val fixedUptime = old.copy(uptimeOffset=newUptimeOffset)
-                persistence.onSntpTimeData(fixedUptime)
+                diskCache.onSntpTimeData(fixedUptime)
             }
 
             Intent.ACTION_TIME_CHANGED -> {
-                //offset from system clock can no longer be trusted
+                //system clock can no longer be trusted
 
                 trueTime = uptimeNow + old.uptimeOffset
                 val newClockOffset = trueTime -clockNow
 
                 val fixedSystemClockTime = old.copy(systemClockOffset = newClockOffset)
-                persistence.onSntpTimeData(fixedSystemClockTime)
+                diskCache.onSntpTimeData(fixedSystemClockTime)
             }
         }
     }
