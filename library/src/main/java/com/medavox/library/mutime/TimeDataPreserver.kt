@@ -36,7 +36,7 @@ internal class TimeDataPreserver(private val persistence:Persistence) : Broadcas
                 trueTime = clockNow + old.systemClockOffset
                 val newUptimeOffset = trueTime -uptimeNow
 
-                val fixedUptime = TimeData(old, uptimeOffset=newUptimeOffset)
+                val fixedUptime = old.copy(uptimeOffset=newUptimeOffset)
                 persistence.onSntpTimeData(fixedUptime)
             }
 
@@ -46,7 +46,7 @@ internal class TimeDataPreserver(private val persistence:Persistence) : Broadcas
                 trueTime = uptimeNow + old.uptimeOffset
                 val newClockOffset = trueTime -clockNow
 
-                val fixedSystemClockTime = TimeData(old, clockOffset = newClockOffset)
+                val fixedSystemClockTime = old.copy(systemClockOffset = newClockOffset)
                 persistence.onSntpTimeData(fixedSystemClockTime)
             }
         }
