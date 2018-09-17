@@ -38,13 +38,13 @@ private const val INDEX_RECEIVE_TIME = 32
 private const val INDEX_TRANSMIT_TIME = 40
 
 
-const val NTP_PORT = 123;
-const val NTP_MODE = 3;
-const val NTP_VERSION = 3;
-const val NTP_PACKET_SIZE = 48;
+const val NTP_PORT = 123
+const val NTP_MODE = 3
+const val NTP_VERSION = 3
+const val NTP_PACKET_SIZE = 48
 
 // 70 years plus 17 leap days
-private const val OFFSET_1900_TO_1970 = ((365L * 70L) + 17L) * 24L * 60L * 60L;
+private const val OFFSET_1900_TO_1970 = ((365L * 70L) + 17L) * 24L * 60L * 60L
 
 /**
  * Simple SNTP client class for retrieving network time.
@@ -65,8 +65,8 @@ internal class SntpClient {
                                rootDispersionMax:Float,
                                serverResponseDelayMax:Int,
                                timeout:Int):TimeData {
-        //Log.d(TAG, "requesting the time from "+ntpHost+"...");
-        var socket:DatagramSocket? = null;
+        //Log.d(TAG, "requesting the time from "+ntpHost+"...")
+        var socket:DatagramSocket? = null
 
         try {
             val address:InetAddress = InetAddress.getByName(ntpHost)
@@ -80,7 +80,7 @@ internal class SntpClient {
 
             //initialise socket
             socket = DatagramSocket()
-            socket.setSoTimeout(timeout);
+            socket.setSoTimeout(timeout)
 
             // get current time and write it to the request packet
             val clockAtRequest = System.currentTimeMillis()
@@ -105,77 +105,69 @@ internal class SntpClient {
             val transmitTime = readTimeStamp(buffer, INDEX_TRANSMIT_TIME);       // T2
 
             //long responseTime = clockAtRequest + (uptimeAtResponse - uptimeAtRequest);//T3
-            //long differenceBetweenCalculatedAndClock = responseTime - clockAtResponse;
+            //long differenceBetweenCalculatedAndClock = responseTime - clockAtResponse
             //Log.v(TAG, "difference between calculated responseTime and equivalent System Clock value: "+
-            //differenceBetweenCalculatedAndClock);
+            //differenceBetweenCalculatedAndClock)
 
             // -----------------------------------------------------------------------------------
             // check validity of response
 
-            val rootDelay:Double = doubleMillis(read(buffer, INDEX_ROOT_DELAY));
+            val rootDelay:Double = doubleMillis(read(buffer, INDEX_ROOT_DELAY))
             if (rootDelay > rootDelayMax) {
-                throw InvalidNtpResponseException(
-                        "Invalid response from NTP server. %s violation. %f [actual] > %f [expected]",
-                        "root_delay",
-                        rootDelay.toFloat(),
-                        rootDelayMax);
+                throw InvalidNtpResponseException("Invalid response from NTP server." +
+                        "root_delay violation. $rootDelay [actual] > $rootDelayMax [expected]")
             }
 
-            val rootDispersion:Double = doubleMillis(read(buffer, INDEX_ROOT_DISPERSION));
+            val rootDispersion:Double = doubleMillis(read(buffer, INDEX_ROOT_DISPERSION))
             if (rootDispersion > rootDispersionMax) {
                 throw  InvalidNtpResponseException(
-                        "Invalid response from NTP server. %s violation. %f [actual] > %f [expected]",
-                        "root_dispersion",
-                        rootDispersion.toFloat(),
-                        rootDispersionMax);
+                        "Invalid response from NTP server. root_dispersion violation." +
+                        " $rootDispersion [actual] > $rootDispersionMax [expected]")
             }
 
             val mode = (buffer[0] and 0x7).toInt()
             if (mode != 4 && mode != 5) {
-                throw InvalidNtpResponseException("untrusted mode value for MuTime: " + mode);
+                throw InvalidNtpResponseException("untrusted mode value for MuTime: $mode")
             }
 
             val stratum = buffer[1] and 0xff.toByte()
             if (stratum < 1 || stratum > 15) {
-                throw InvalidNtpResponseException("untrusted stratum value for MuTime: " + stratum);
+                throw InvalidNtpResponseException("untrusted stratum value for MuTime: $stratum")
             }
 
             val leap = (buffer[0].toInt() shr 6) and 0x3
             if (leap == 3) {
-                throw InvalidNtpResponseException("unsynchronized server responded for MuTime");
+                throw InvalidNtpResponseException("unsynchronized server responded for MuTime")
             }
 
             val roundTripDelay = (clockAtResponse - clockAtRequest) - (transmitTime - receiveTime)
-            val delay = Math.abs(roundTripDelay);
+            val delay = Math.abs(roundTripDelay)
             if (delay >= serverResponseDelayMax) {
-                throw InvalidNtpResponseException(
-                    "%s too large for comfort; %f [actual] >= %f [max]",
-                    "server_response_delay",
-                    delay.toFloat(),
-                    serverResponseDelayMax.toFloat())
+                throw InvalidNtpResponseException("server_response_delay too large for comfort; " +
+                            "$delay [actual] >= $serverResponseDelayMax [max]")
             }
 
-            val timeElapsedSinceRequest = Math.abs(clockAtRequest - System.currentTimeMillis());
+            val timeElapsedSinceRequest = Math.abs(clockAtRequest - System.currentTimeMillis())
             if (timeElapsedSinceRequest >= 10_000) {
-                throw InvalidNtpResponseException("Request was sent more than 10 seconds ago " +
-                                                            timeElapsedSinceRequest)
+                throw InvalidNtpResponseException("Request was sent more than 10 seconds ago: " +
+                        "${timeElapsedSinceRequest}ms")
             }
 
             // -----------------------------------------------------------------------------------
 
             //response data is valid, send time info from response
             //TimeData td = new TimeData.Builder().roundTripDelay()
-            val clockOffset = ((receiveTime - clockAtRequest) + (transmitTime - clockAtResponse)) / 2;
-            val uptimeOffset = ((receiveTime - uptimeAtRequest) + (transmitTime - uptimeAtResponse)) / 2;
+            val clockOffset = ((receiveTime - clockAtRequest) + (transmitTime - clockAtResponse)) / 2
+            val uptimeOffset = ((receiveTime - uptimeAtRequest) + (transmitTime - uptimeAtResponse)) / 2
 
             return TimeData(
                     systemClockOffset=clockOffset,
                     uptimeOffset=uptimeOffset,
                     roundTripDelay=roundTripDelay)
-            //Log.i(TAG, "---- SNTP successful response from " + ntpHost);
+            //Log.i(TAG, "---- SNTP successful response from " + ntpHost)
         } catch (e:Exception) {
-            Log.e(TAG, "SNTP request failed for $ntpHost: $e");
-            //e.printStackTrace();
+            Log.e(TAG, "SNTP request failed for $ntpHost: $e")
+            //e.printStackTrace()
             throw e
         } finally {
             socket?.close()
@@ -191,10 +183,10 @@ internal class SntpClient {
      * @return 4 bytes as a 32-bit long (unsigned big endian)
      */
     private fun read(buffer:ByteArray, offset:Int):Long {
-        val b0 = buffer[offset];
-        val b1 = buffer[offset + 1];
-        val b2 = buffer[offset + 2];
-        val b3 = buffer[offset + 3];
+        val b0 = buffer[offset]
+        val b1 = buffer[offset + 1]
+        val b2 = buffer[offset + 2]
+        val b3 = buffer[offset + 3]
 
         return (ui(b0).toLong() shl 24) +
                (ui(b1).toLong() shl 16) +
@@ -211,7 +203,7 @@ internal class SntpClient {
         // consider offset for number of seconds
         // between Jan 1, 1900 (NTP epoch) and Jan 1, 1970 (Java epoch)
         var seconds:Long = OFFSET_1900_TO_1970 + (time / 1000L)
-        val milliseconds:Long = time - seconds * 1000L;
+        val milliseconds:Long = time - seconds * 1000L
 
         var offset = startingOffset
 
@@ -237,10 +229,10 @@ internal class SntpClient {
      * @return NTP timestamp in Java epoch
      */
     private fun readTimeStamp(buffer:ByteArray, offset:Int):Long {
-        val seconds = read(buffer, offset);
-        val fraction = read(buffer, offset + 4);
+        val seconds = read(buffer, offset)
+        val fraction = read(buffer, offset + 4)
 
-        return ((seconds - OFFSET_1900_TO_1970) * 1000) + ((fraction * 1000L) / 0x100000000L);
+        return ((seconds - OFFSET_1900_TO_1970) * 1000) + ((fraction * 1000L) / 0x100000000L)
     }
 
     /***
@@ -253,7 +245,7 @@ internal class SntpClient {
      * @return unsigned int value of byte
      */
     private fun ui(b:Byte):Int {
-        return (b and 0xFF.toByte()).toInt();
+        return (b and 0xFF.toByte()).toInt()
     }
 
     /**
@@ -271,6 +263,6 @@ internal class SntpClient {
     }
 
     internal interface SntpResponseListener {
-        fun onSntpTimeData(data: TimeData):Unit;
+        fun onSntpTimeData(data: TimeData)
     }
 }

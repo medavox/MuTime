@@ -44,7 +44,7 @@ internal class TimeDataPreserver(private val persistence:Persistence) : Broadcas
                 //offset from system clock can no longer be trusted
 
                 trueTime = uptimeNow + old.uptimeOffset
-                val newClockOffset = trueTime -clockNow;
+                val newClockOffset = trueTime -clockNow
 
                 val fixedSystemClockTime = TimeData(old, clockOffset = newClockOffset)
                 persistence.onSntpTimeData(fixedSystemClockTime)
