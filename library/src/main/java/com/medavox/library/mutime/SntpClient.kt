@@ -52,7 +52,7 @@ private const val OFFSET_1900_TO_1970 = ((365L * 70L) + 17L) * 24L * 60L * 60L
  * This server may be wrong, or there may be an anomalous delay to the response.
  * This is why it is better to use the full NTP, which queries multiple servers multiple times.
  */
-internal class SntpClient {
+internal object SntpClient {
 
     /**
      * Sends an NTP request to the given host and processes the response.
@@ -63,10 +63,10 @@ internal class SntpClient {
     @Synchronized
     @Throws(IOException::class)
     fun requestTime(ntpHost:String,
-                               rootDelayMax:Float,
-                               rootDispersionMax:Float,
-                               serverResponseDelayMax:Int,
-                               timeout:Int):TimeData {
+                               rootDelayMax:Float=100.toFloat(),
+                               rootDispersionMax:Float=100.toFloat(),
+                               serverResponseDelayMax:Int=200,
+                               timeout:Int=30_000):TimeData {
         //Log.d(TAG, "requesting the time from "+ntpHost+"...")
         var socket:DatagramSocket? = null
 
