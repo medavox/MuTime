@@ -16,9 +16,11 @@ import java.util.*
  * To get the actual time:
  *<pre>
  * {@code
- * MuTime.requestSimpleTimeFromServer("time.google.com")//use any ntp server address here, eg "time.apple.com"
+ * MuTime.enableDiskCache(this);
+ * //use any ntp server address here, eg "time.apple.com", "time.google.com"
+ * MuTime.getTheTime("0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org");
  *
- *  //get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
+ * //get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
  * try {
  *     long trueTime = MuTime.now();//throws MissingTimeDataException if we don't know the time
  * }
@@ -34,33 +36,26 @@ object MuTime {
     private var persistence: DiskCache? = null
     private var rebootWatcher:RebootWatcher? = null
     private var timeData: TimeData? = null
-
-    /**Initializes MuTime.
-     * Call this to get reliable time from an NTP server.
-     * This is 'simple' because the server is only queried once.
-     * The full NTP algorithm queries each server multiple times,
-     * to compensate for anomalously high delays and get the best round-trip time.
-     *
-     *<p>NOTE: this method makes a synchronous network call,
-     * so you must call it from a background thread (not the the main/UI thread)
-     * or you will get a {@link android.os.NetworkOnMainThreadException}.
-     * </p>*/
-    @Throws(IOException::class)
-    fun requestSimpleTimeFromServer(ntpHost:String) {
-        SntpRequest(ntpHost, persistence).send()
-    }
+    private var timeAcquiredListener:(()->Unit)? = null
 
     /**
      * Initialize MuTime.
-     * Use this if you want to resolve the NTP Pool address to individual IPs yourself
-     * <p>
-     * See https://github.com/instacart/truetime-android/issues/42
-     * to understand why you may want to do something like this.
+     * Call this to get reliable time from one or more NTP servers.
      *
-     * @return Observable of detailed long[] containing most important parts of the actual NTP response
-     * See RESPONSE_INDEX_ prefixes in {@link SntpClient} for details
+     * The NTP algorithm queries each server multiple times,
+     * to compensate for anomalously high delays and get the best round-trip time.
+     *
+     * @param ntpHosts a list of one or more NTP server URLs, of the format 0.pool.ntp.org
+     * @param listener Optional listener for interested classes to be notified once MuTime has
+     * acquired valid time data, and is definitely initialised.
+     * After MuTime calls this class's method, it is now able to provide the actual time.
+     * NOTE: MuTime will call this lambda multiple times, whenever it receives fresh time data.
+     * Do not expect this class's method to be called only once;
+     * it is the listener's responsiblity to track whether a call to this
+     * lambda was the first or not.
      */
-    fun requestNtpFromServers(vararg ntpHosts:String) {
+    fun getTheTime( vararg ntpHosts:String, listener:(()->Unit)?=null) {
+        if(listener != null) timeAcquiredListener = listener
         Log.i(TAG, "Getting the time from ${ntpHosts.size} IP address(es): ${Arrays.toString(ntpHosts)}...")
 
         val para:ParallelProcess<String, Array<InetAddress>?> = ParallelProcess{
@@ -122,36 +117,6 @@ object MuTime {
 
     /**Get the True Time in Unix Epoch format: milliseconds since midnight on 1 January, 1970.
      * The current time in the default Timezone.
-     * <p>
-     * Try something like this:
-     * </p>
-     * <pre>
-     * {@code
-     *  new Thread(){
-    @Override
-    public void run() {
-    Log.i(TAG, "trying to get the time...");
-    MuTime.enableDiskCaching(MainActivity.this);
-    try {
-    MuTime.requestSimpleTimeFromServer("time.google.com");
-    }
-    catch(IOException ioe) {
-    Log.e(TAG, "network error while getting the time:"+ioe);
-    }
-    //...
-    try {
-    Log.i(TAG, "time gotten:"+new Date(MuTime.now()));
-    }
-    catch (MissingTimeDataException mtde) {
-    Log.e(TAG, mtde.toString());
-    }
-    }
-    }.start();
-    //...
-    //from an activity:
-    makeRequest.execute(this);
-
-     * }</pre>
      * @return a Unix Epoch-format timestamp of the actual current time, in the default timezone.*/
     @Throws(MissingTimeDataException::class)
     fun now(): Long {
@@ -184,8 +149,9 @@ object MuTime {
     /**Enable the use of {@link android.content.SharedPreferences}
      * to store time data across app closes, system reboots and system clock meddling.
      * @param c a Context object which is needed for accessing SharedPreferences*/
-    fun enableDiskCache(sp: SharedPreferences) {
-        persistence = DiskCache(sp)
+    fun enableDiskCache(context:Context) {
+        persistence = DiskCache(context.getSharedPreferences(DiskCache.SHARED_PREFS_KEY,
+                Context.MODE_PRIVATE))
     }
 
     /**Disable storing of Time Data on-disk.
@@ -240,7 +206,10 @@ object MuTime {
             if(newMedian != oldMedian) {
                 oldMedian = newMedian
                 Log.d(TAG, "new median time: $newMedian")
+                Log.d(TAG, "based on ${timeDatas.size} valid readings")
                 persistence?.onSntpTimeData(newMedian)
+                timeAcquiredListener?.invoke()
+                timeData = newMedian
             }
         }
     }
