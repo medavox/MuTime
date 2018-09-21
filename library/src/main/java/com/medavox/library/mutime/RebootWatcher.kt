@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import android.util.Log
+import com.medavox.library.mutime.DiskCache.Companion.SHARED_PREFS_KEY
 
 /**
  * A {@link BroadcastReceiver} which listens for device reboots and clock changes by the user.
@@ -12,9 +13,9 @@ import android.util.Log
  * and {@link Intent#ACTION_TIME_CHANGED TIME_CHANGED},
  * to allow MuTime to correct its offsets against these events.
  */
-private const val TAG:String  = "TimeDataPreserver"
-class RebootWatcher : BroadcastReceiver() {
 
+class RebootWatcher : BroadcastReceiver() {
+    private val TAG:String  = "TimeDataPreserver"
     /**Detects when one of the stored time stamps have been invalidated by user actions,
      * and repairs it using the intact timestamp
      *
