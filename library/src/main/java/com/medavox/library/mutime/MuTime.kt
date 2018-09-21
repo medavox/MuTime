@@ -254,9 +254,11 @@ object MuTime {
      * or 2) meet the minimum NTP requirements (root delay, root dispersion, round-trip delay).
      */
     private fun bestResponseAgainstSingleIp(repeatCount:Int, ntpHost:String):TimeData?  {
-        val para = ParallelProcess<String, TimeData>{SntpClient.requestTime(it)}
+        val para = ParallelProcess<String, TimeData?>{
+            try{SntpClient.requestTime(it)}catch(e:IOException){null}
+        }
         para.repeatOnInput(repeatCount, ntpHost)
-        val results:List<TimeData> = para.collectOutputWhenFinished()
+        val results:List<TimeData> = para.collectOutputWhenFinished().filterNotNull()
         return if(results.isEmpty()) null else filterLeastRoundTripDelay(results)
     }
 
