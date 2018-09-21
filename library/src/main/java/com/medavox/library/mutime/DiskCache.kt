@@ -3,21 +3,18 @@ package com.medavox.library.mutime
 import android.content.SharedPreferences
 import android.util.Log
 
-internal const val SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences"
-private const val KEY_SYSTEM_CLOCK_OFFSET = "system clock offset"
-private const val KEY_UPTIME_OFFSET = "uptime offset"
-private const val KEY_ROUND_TRIP_DELAY = "round trip delay"
-
-private const val TAG = "Persistence"
-
-/**Handles caching of offsets to disk using {@link SharedPreferences},
- *
- * This class keeps both an in-memory copy of the time data, plus
- * arbitrates access to the SharedPrefs copy, all under one API.
- * all the API user has to do is call {@link #getTimeData()}.
+/**
+ * This class manages the on-disk copy of the time data in [SharedPreferences].
  * */
 internal class DiskCache(private val sharedPrefs :SharedPreferences) : SntpClient.SntpResponseListener {
-    
+    companion object {
+        internal const val SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences"
+        private const val KEY_SYSTEM_CLOCK_OFFSET = "system clock offset"
+        private const val KEY_UPTIME_OFFSET = "uptime offset"
+        private const val KEY_ROUND_TRIP_DELAY = "round trip delay"
+    }
+    private val TAG = "Persistence"
+
     /**Retrieve time offset information.
      * Gets in the in-memory copy if it exists,
      * or retrieves it from shared preferences,
