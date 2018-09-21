@@ -161,16 +161,16 @@ object MuTime {
         3. We have no/invalid SNTP data,
          and won't know the correct time until we make a network request
 */
-        val timeData = persistence?.getTimeData()
-        if (timeData == null) {
+        val timeInMemory = timeData ?://try to use time data in memory
+            persistence?.getTimeData() ?://failing that, get it from disk
+
             throw MissingTimeDataException("time data is missing or invalid. " +
                     "Please make an NTP network request by calling " +
                     "MuTime.requestSimpleTimeFromServer(String) to refresh the true time");
-        }
-
+        if(timeData == null) timeData = timeInMemory//if we got time data from SP, put it in memory
         //these values should be identical, or near as dammit
-        val timeFromUptime = SystemClock.elapsedRealtime() + timeData.uptimeOffset
-        val timeFromClock = System.currentTimeMillis() + timeData.systemClockOffset
+        val timeFromUptime = SystemClock.elapsedRealtime() + timeInMemory.uptimeOffset
+        val timeFromClock = System.currentTimeMillis() + timeInMemory.systemClockOffset
 
         //10ms is probably quite lenient
         if (Math.abs(timeFromClock - timeFromUptime) > 10) {
