@@ -28,10 +28,17 @@ data class MissingTimeDataException(override val message: String) : Exception(me
  * @param detailMessage An informative message that api users can use to know what went wrong.
  *                should contain {@link #property}, {@link #expectedValue} and
  *                {@link #actualValue} as format specifiers (in that order)
+ */
+data class InvalidNtpResponseException(val detailMessage:String) : IOException(detailMessage)
+
+/**Thrown when an NTP server sends back an invalid response.
+ * @param detailMessage An informative message that api users can use to know what went wrong.
+ *                should contain {@link #property}, {@link #expectedValue} and
+ *                {@link #actualValue} as format specifiers (in that order)
  * @param propertyName  property that caused the invalid NTP response
  *
  */
-data class InvalidNtpResponseException(val detailMessage:String,
-                                  val propertyName:String="n/a",
-                                  val expectedValue:Float=0F,
-                                  val actualValue:Float=0F) : IOException(detailMessage)
+data class InvalidNtpResponseValueException(val detailMessage:String,
+                                       val propertyName:String="n/a",
+                                       val expectedValue:Float=0F,
+                                       val actualValue:Float=0F) : IOException(detailMessage)
