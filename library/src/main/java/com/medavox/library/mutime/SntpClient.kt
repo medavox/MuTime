@@ -82,7 +82,7 @@ internal object SntpClient {
 
             //initialise socket
             socket = DatagramSocket()
-            socket.setSoTimeout(timeout)
+            socket.soTimeout = timeout
 
             // get current time and write it to the request packet
             val clockAtRequest = System.currentTimeMillis()
@@ -102,9 +102,9 @@ internal object SntpClient {
             // See here for the algorithm used:
             // https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
 
-            //long originateTime = readTimeStamp(buffer, INDEX_ORIGINATE_TIME);     // T0
-            val receiveTime = readTimeStamp(buffer, INDEX_RECEIVE_TIME);         // T1
-            val transmitTime = readTimeStamp(buffer, INDEX_TRANSMIT_TIME);       // T2
+            //long originateTime = readTimeStamp(buffer, INDEX_ORIGINATE_TIME)  // T0
+            val receiveTime = readTimeStamp(buffer, INDEX_RECEIVE_TIME)         // T1
+            val transmitTime = readTimeStamp(buffer, INDEX_TRANSMIT_TIME)       // T2
 
             //long responseTime = clockAtRequest + (uptimeAtResponse - uptimeAtRequest);//T3
             //long differenceBetweenCalculatedAndClock = responseTime - clockAtResponse
@@ -204,7 +204,7 @@ internal object SntpClient {
     private fun writeTimeStamp(buffer:ByteArray, startingOffset:Int, time:Long) {
         // consider offset for number of seconds
         // between Jan 1, 1900 (NTP epoch) and Jan 1, 1970 (Java epoch)
-        var seconds:Long = OFFSET_1900_TO_1970 + (time / 1000L)
+        val seconds:Long = OFFSET_1900_TO_1970 + (time / 1000L)
         val milliseconds:Long = time - seconds * 1000L
 
         var offset = startingOffset
@@ -247,7 +247,7 @@ internal object SntpClient {
      * @return unsigned int value of byte
      */
     private fun ui(b:Byte):Int {
-        return (b and 0xFF.toByte()).toInt()
+        return b.toInt() and 0xFF
     }
 
     /**
