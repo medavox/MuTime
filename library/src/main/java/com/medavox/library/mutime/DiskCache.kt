@@ -1,8 +1,6 @@
 package com.medavox.library.mutime
 
-import android.content.Context
 import android.content.SharedPreferences
-import android.os.SystemClock
 import android.util.Log
 
 internal const val SHARED_PREFS_KEY = "com.medavox.library.mutime.shared_preferences"
@@ -24,7 +22,7 @@ internal class DiskCache(private val sharedPrefs :SharedPreferences) : SntpClien
      * Gets in the in-memory copy if it exists,
      * or retrieves it from shared preferences,
      * or finally returns null.
-     * @return a {@link TimeData} which can be used to compute the real time,
+     * @return a [TimeData] which can be used to compute the real time,
      * or null if no data is available.*/
     @Throws(MissingTimeDataException::class)
     fun getTimeData():TimeData {
@@ -63,7 +61,7 @@ internal class DiskCache(private val sharedPrefs :SharedPreferences) : SntpClien
         }*/
     }
 
-    /**Saves the received {@link TimeData}, both locally as instance variables,
+    /**Saves the received [TimeData], both locally as instance variables,
      * and into SharedPreferences.*/
     override fun onSntpTimeData(data:TimeData) {
         Log.d(TAG, "Saving true time info to disk: $data");

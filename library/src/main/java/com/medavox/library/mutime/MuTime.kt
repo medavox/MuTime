@@ -1,21 +1,18 @@
-package com.medavox.library.mutime;
+package com.medavox.library.mutime
 
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences
-import android.os.SystemClock;
-import android.util.Log;
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.SystemClock
+import android.util.Log
 
-import org.jetbrains.annotations.NotNull;
-
-import java.io.IOException;
+import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.*
 
-/**Entrypoint for accessing the MuTime API.
+/**Entrypoint for the MuTime API.
  * To get the actual time:
  *<pre>
  * {@code
@@ -86,8 +83,7 @@ object MuTime {
     }
 
     /**Whether or not MuTime knows the actual time.
-     * @return Whether or not an immediate call to {@link #now()} would throw a
-     * {@link MissingTimeDataException}.*/
+     * @return Whether or not a call to [MuTime.now()] would throw a [MissingTimeDataException].*/
     fun hasTheTime(): Boolean {
         val tymDatum:TimeData? =
                 if (timeData != null) {
@@ -180,9 +176,7 @@ object MuTime {
         if (Math.abs(timeFromClock - timeFromUptime) > 10) {
             throw MissingTimeDataException("offsets for clocks did not agree on the time - " +
                     "offset from uptime makes it " + timeFromUptime + ", " +
-                    "but the offset from the clock makes it " + timeFromClock);
-
-
+                    "but the offset from the clock makes it " + timeFromClock)
         }
         return timeFromClock
     }
@@ -195,7 +189,7 @@ object MuTime {
     }
 
     /**Disable storing of Time Data on-disk.
-     * This method is provided for the sake of API completeness; why would you actually want to???*/
+     * This method is provided for the sake of API completeness; why would you actually want to?*/
     fun disableDiskCache() {
         persistence = null
     }
@@ -206,11 +200,11 @@ object MuTime {
         return persistence != null
     }
 
-    /**Adds a {@link android.content.BroadcastReceiver} which listens for the user changing the clock,
+    /**Adds a [android.content.BroadcastReceiver] which listens for the user changing the clock,
      * or the device rebooting. In these cases,
      * it repairs the partially-invalidated Time Data using the remaining intact information.
      * @param c Needed for accessing the Android BroadcastReceiver API,
-     *          eg {@link Context#registerReceiver(BroadcastReceiver, IntentFilter)}*/
+     *          eg [Context.registerReceiver(BroadcastReceiver, IntentFilter)]*/
     fun registerRebootWatcher(c: Context) {
         if (rebootWatcher == null) {
             rebootWatcher = RebootWatcher()
@@ -219,7 +213,7 @@ object MuTime {
             intentFilter.addAction(Intent.ACTION_TIME_CHANGED)
             c.registerReceiver(rebootWatcher, intentFilter)
         } else {
-            Log.w(TAG, "call to registerRebootWatcher(Context) was unnecessary: we are already registered");
+            Log.w(TAG, "call to registerRebootWatcher(Context) was unnecessary: we are already registered")
         }
     }
 
@@ -229,7 +223,7 @@ object MuTime {
             rebootWatcher = null
         } else {
             Log.w(TAG, "call to unregisterRebootWatcher(Context) was unnecessary: " +
-                    "there is no TimeDataPreserver currently registered");
+                    "there is no TimeDataPreserver currently registered")
         }
     }
 

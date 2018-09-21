@@ -5,7 +5,7 @@ package com.medavox.library.mutime
  * @author Adam Howard
  * @since 17/09/2018
  */
-internal class ParallelProcess<In, Out>(private val worker:(input:In) -> Out) : Thread(){
+internal class ParallelProcess<In, Out>(private val worker:(input:In) -> Out) : Thread() {
     private val threads:MutableSet<InternalWrapper> = mutableSetOf()
 
     /**Run this instance's worker repeatedly concurrently with the same input.
