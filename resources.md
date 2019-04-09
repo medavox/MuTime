@@ -18,3 +18,9 @@ Useful Sites For Understanding & Developing This Repo
 [Clock Synchronisation](https://en.wikipedia.org/wiki/Clock_synchronization)
 
 [Vector Clock](https://en.wikipedia.org/wiki/Vector_clock)
+
+[Intersection Algorithm](https://en.wikipedia.org/wiki/Intersection_algorithm)
+
+[SE:How Does NTP Work?](https://stackoverflow.com/q/1228089)
+
+[Cisco: Protocol Basics: NTP](https://www.cisco.com/c/en/us/about/press/internet-protocol-journal/back-issues/table-contents-58/154-ntp.html)
