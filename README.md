@@ -45,8 +45,6 @@ dependencies {
 
 # Usage
 
-## Simple (SNTP) version
-
 ```java
 //optionally enable the disk cache
 MuTime.enableDiskCache(/*Context*/ this);//this is what actually hardens MuTime against clock changes and reboots
