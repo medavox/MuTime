@@ -1,3 +1,6 @@
+# NOTICE: THIS LIBRARY IS NO LONGER MAINTAINED
+
+
 # MuTime for Android
 
 ![MuTime](mutime.png "MuTime for Android")
