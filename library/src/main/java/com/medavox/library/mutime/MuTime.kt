@@ -40,19 +40,17 @@ object MuTime {
 
     /**
      * Initialize MuTime.
+     * **THIS METHOD BE MUST BE CALLED ON A BACKGROUND THREAD!**
      * Call this to get reliable time from one or more NTP servers.
      *
      * The NTP algorithm queries each server multiple times,
      * to compensate for anomalously high delays and get the best round-trip time.
      *
      * @param ntpHosts a list of one or more NTP server URLs, of the format 0.pool.ntp.org
-     * @param listener Optional listener for interested classes to be notified once MuTime has
-     * acquired valid time data, and is definitely initialised.
-     * After MuTime calls this class's method, it is now able to provide the actual time.
-     * NOTE: MuTime will call this lambda multiple times, whenever it receives fresh time data.
+     * @param listener Optional listener for interested classes to be notified when MuTime is initialised.
+     * NOTE: MuTime will call this lambda multiple times: whenever it receives fresh time data.
      * Do not expect this class's method to be called only once;
-     * it is the listener's responsiblity to track whether a call to this
-     * lambda was the first or not.
+     * it is the listener's responsiblity to tell if a call to it was the first.
      */
     fun initialize(vararg ntpHosts:String, listener:(()->Unit)?=null) {
         if(listener != null) timeAcquiredListener = listener
@@ -131,7 +129,7 @@ object MuTime {
 
             throw MissingTimeDataException("time data is missing or invalid. " +
                     "Please make an NTP network request by calling " +
-                    "MuTime.requestSimpleTimeFromServer(String) to refresh the true time");
+                    "MuTime.initialize(ntpServerUrl:String) to refresh the true time");
         if(timeData == null) timeData = timeInMemory//if we got time data from SP, put it in memory
         //these values should be identical, or near as dammit
         val timeFromUptime = SystemClock.elapsedRealtime() + timeInMemory.uptimeOffset
@@ -147,7 +145,7 @@ object MuTime {
     }
 
     /**Enable the use of {@link android.content.SharedPreferences}
-     * to store time data across app closes, system reboots and system clock meddling.
+     * to store time data across app closes, system reboots and system clock user-meddling.
      * @param c a Context object which is needed for accessing SharedPreferences*/
     fun enableDiskCache(context:Context) {
         persistence = DiskCache(context.getSharedPreferences(DiskCache.SHARED_PREFS_KEY,

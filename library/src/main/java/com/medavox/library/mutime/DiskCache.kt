@@ -4,7 +4,7 @@ import android.content.SharedPreferences
 import android.util.Log
 
 /**
- * This class manages the on-disk copy of the time data in [SharedPreferences].
+ * This class manages the persistent copy of the time data in [SharedPreferences].
  * */
 internal class DiskCache(private val sharedPrefs :SharedPreferences) : SntpClient.SntpResponseListener {
     companion object {
@@ -18,9 +18,9 @@ internal class DiskCache(private val sharedPrefs :SharedPreferences) : SntpClien
     /**Retrieve time offset information.
      * Gets in the in-memory copy if it exists,
      * or retrieves it from shared preferences,
-     * or finally returns null.
+     * or finally throws an exception.
      * @return a [TimeData] which can be used to compute the real time,
-     * or null if no data is available.*/
+     * @throws MissingTimeDataException if no data is available.*/
     @Throws(MissingTimeDataException::class)
     fun getTimeData():TimeData {
         Log.w(TAG, "attempting to retrieve time data from SharedPreferences...")

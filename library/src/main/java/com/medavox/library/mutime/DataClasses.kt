@@ -15,9 +15,9 @@ internal data class TimeData(
         val roundTripDelay:Long,
         val systemClockOffset:Long,
         val uptimeOffset:Long
-        )
+)
 
-/**Thrown when a call to `MuTime.now()` is made when MuTime doesn't have the actual time.
+/**Thrown when a call to `MuTime.now()` is made and MuTime doesn't have the actual time.
  *
  * @author Adam Howard
  * @since 16/10/17
@@ -25,14 +25,14 @@ internal data class TimeData(
 data class MissingTimeDataException(override val message: String) : Exception(message)
 
 /**Thrown when an NTP server sends back an invalid response.
- * @param detailMessage An informative message for API users to know what went wrong.
+ * @param detailMessage An informative message to let API users know what went wrong.
  *                should contain {@link #property}, {@link #expectedValue} and
  *                {@link #actualValue} as format specifiers (in that order)
  */
 data class InvalidNtpResponseException(val detailMessage:String) : IOException(detailMessage)
 
-/**Thrown when an NTP server sends back an invalid response.
- * @param detailMessage An informative message that api users can use to know what went wrong.
+/**Thrown when an NTP server sends back an invalid value for one one of the NTP fields.
+ * @param detailMessage An informative message to let API users know what went wrong.
  *                should contain {@link #property}, {@link #expectedValue} and
  *                {@link #actualValue} as format specifiers (in that order)
  * @param propertyName  property that caused the invalid NTP response
