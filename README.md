@@ -1,4 +1,10 @@
-# NOTICE: THIS LIBRARY IS NO LONGER MAINTAINED
+# NOTICE: THIS LIBRARY IS NOT MAINTAINED
+
+A rewrite into Kotlin was performed in September 2018, and pushed to master in May 2020.
+
+No further maintenance (beyond releasing this work) is planned.
+
+This is alpha-quality software; use at your own risk.
 
 
 # MuTime for Android
