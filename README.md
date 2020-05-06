@@ -70,16 +70,17 @@ If you run it on the main (UI) thread, you will get a
 
 It's pretty simple actually. We:-
 
-1. make a request to an NTP server that gives us the actual time.
-2. establish the delta between device uptime and uptime at the time of the network response.
-* resolve the DNS for the provided NTP host to single IP addresses,
-* shoot multiple requests to that single IP, 
-* guard against the above mentioned checks,
-* retry every single failed request,
-* filter the best response,
-* and persist that to disk.
+* make a request to one or more NTP servers that give us the true time.
+    * DNS-resolve the user-provided strings of NTP URLs into 1 or more IP addresses.
+    * For each ip address:
+        * shoot multiple requests to it (currently 4 times), 
+        * establish the delta between device uptime at request-time and response-time.
+        * picks the lowest-latency response (if any).
+    * pick the response from all the queried IP addresses with the median system clock offset,
+    * and persist that to disk.
 
-On each subsequent request for the true time "now", we compute the correct time from that offset.
+
+On each subsequent request for the true time "now", we compute the correct time from that stored offset.
 
 Once we have this offset information, it's valid until you reboot your device or manually change the system clock.
 This means if you enable the disk caching feature, after a single successful NTP request you can

@@ -56,6 +56,7 @@ object MuTime {
         if(listener != null) timeAcquiredListener = listener
         Log.i(TAG, "Getting the time from ${ntpHosts.size} IP address(es): ${ntpHosts.contentToString()}...")
 
+        //filter the provided strings into a list of reachable IP addresses for ntp hosts
         val para:ParallelProcess<String, Array<InetAddress>?> = ParallelProcess{url ->
             InetAddress.getAllByName(url)?.filterNotNull()?.filter{it.isReachable()}?.toTypedArray()
         }
@@ -64,8 +65,11 @@ object MuTime {
         val inets = mutableSetOf<InetAddress>()
         results.filterNotNull().forEach { it.forEach { inets.add(it) } }
 
+        //make an NTP request to each IP address
         for (ntpHost in inets) {
             Thread(Runnable{
+                //Get the best response from an IP address by sending multiple requests,
+                // to reduce the effect of any anomalous latency
                 val bestResponse:TimeData? = bestResponseAgainstSingleIp(SERVER_QUERY_REPEAT_COUNT, ntpHost.hostAddress)
                 Log.v(TAG, "got time data \"$bestResponse\" from ${ntpHost.hostAddress}")
                 if(bestResponse != null) {
