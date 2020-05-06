@@ -4,7 +4,7 @@ import java.io.IOException
 
 
 /**
- * A POJO data defining the difference between each of Android's system clocks,
+ * Defines the difference between each of Android's system clocks,
  * and the time on the remote server.
  * Includes the round trip delay time, for gauging accuracy of data.
  *
@@ -25,7 +25,7 @@ internal data class TimeData(
 data class MissingTimeDataException(override val message: String) : Exception(message)
 
 /**Thrown when an NTP server sends back an invalid response.
- * @param detailMessage An informative message that api users can use to know what went wrong.
+ * @param detailMessage An informative message for API users to know what went wrong.
  *                should contain {@link #property}, {@link #expectedValue} and
  *                {@link #actualValue} as format specifiers (in that order)
  */

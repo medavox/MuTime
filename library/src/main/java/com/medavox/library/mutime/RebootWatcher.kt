@@ -13,7 +13,6 @@ import com.medavox.library.mutime.DiskCache.Companion.SHARED_PREFS_KEY
  * and {@link Intent#ACTION_TIME_CHANGED TIME_CHANGED},
  * to allow MuTime to correct its offsets against these events.
  */
-
 class RebootWatcher : BroadcastReceiver() {
     private val TAG:String  = "TimeDataPreserver"
     /**Detects when one of the stored time stamps have been invalidated by user actions,

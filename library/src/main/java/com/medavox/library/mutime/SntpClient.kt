@@ -48,7 +48,7 @@ private const val OFFSET_1900_TO_1970 = ((365L * 70L) + 17L) * 24L * 60L * 60L
 
 /**
  * Simple Network Time Protocol client for retrieving time from the network.
- * The Simple in SNTP means that it only queries one server for the time once.
+ * The 'Simple' in SNTP means that it only queries one server for the time once.
  * This server may be wrong, or there may be an anomalous delay to the response.
  * This is why it is better to use the full NTP, which queries multiple servers multiple times.
  */

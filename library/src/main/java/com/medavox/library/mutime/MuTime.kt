@@ -54,7 +54,7 @@ object MuTime {
      * it is the listener's responsiblity to track whether a call to this
      * lambda was the first or not.
      */
-    fun getTheTime( vararg ntpHosts:String, listener:(()->Unit)?=null) {
+    fun initialize(vararg ntpHosts:String, listener:(()->Unit)?=null) {
         if(listener != null) timeAcquiredListener = listener
         Log.i(TAG, "Getting the time from ${ntpHosts.size} IP address(es): ${Arrays.toString(ntpHosts)}...")
 
@@ -216,7 +216,7 @@ object MuTime {
 
     /**
      * Takes a single NTP host (as a String),
-     * performs an SNTP request on it repeatCount number of times,
+     * performs an SNTP request on it [repeatCount] number of times,
      * and returns the single result with the lowest round-trip delay.
      *
      * Returns null if none of the requests to the IP 1) return a successful response,

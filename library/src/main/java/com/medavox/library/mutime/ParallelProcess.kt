@@ -14,9 +14,9 @@ internal class ParallelProcess<In, Out>(private val worker:(input:In) -> Out) : 
      * @param input the input to run on*/
     fun repeatOnInput(numberOfThreads:Int, input:In) {
         for(i in 1..numberOfThreads) {
-            val wurkur = InternalWrapper(input, worker)
-            threads.add(wurkur)
-            wurkur.start()
+            val worker = InternalWrapper(input, worker)
+            threads.add(worker)
+            worker.start()
         }
     }
 
@@ -24,9 +24,9 @@ internal class ParallelProcess<In, Out>(private val worker:(input:In) -> Out) : 
      * @param input the array to iterate over concurrently.*/
     fun oneWorkerPerElement(input:Array<out In>) {
         for(i in input.indices) {
-            val wurkur = InternalWrapper(input[i], worker)
-            threads.add(wurkur)
-            wurkur.start()
+            val worker = InternalWrapper(input[i], worker)
+            threads.add(worker)
+            worker.start()
         }
     }
 
@@ -42,12 +42,12 @@ internal class ParallelProcess<In, Out>(private val worker:(input:In) -> Out) : 
         return outputInProgress.asSequence().filter{it != null}.map{it as Out}.toList()
     }
 
-    private inner class InternalWrapper(val input: In, val worker:(input:In) -> Out): Thread() {
+    private inner class InternalWrapper(val input: In, val workFunction:(input:In) -> Out): Thread() {
         private var out: Out? = null
 
         override fun run() {
             super.run()
-            out = worker(input)
+            out = workFunction(input)
         }
 
         fun getOutput(): Out? {
