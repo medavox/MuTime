@@ -39,7 +39,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.medavox:MuTime:v0.6'
+    implementation 'com.github.medavox:MuTime:v0.7'
 }
 ```
 
