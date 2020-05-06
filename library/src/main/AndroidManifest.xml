@@ -15,6 +15,7 @@
         <receiver android:name="com.medavox.library.mutime.RebootWatcher">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.TIME_CHANGED"/>
             </intent-filter>
         </receiver>
     </application>
