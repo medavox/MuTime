@@ -54,10 +54,10 @@ object MuTime {
      */
     fun initialize(vararg ntpHosts:String, listener:(()->Unit)?=null) {
         if(listener != null) timeAcquiredListener = listener
-        Log.i(TAG, "Getting the time from ${ntpHosts.size} IP address(es): ${Arrays.toString(ntpHosts)}...")
+        Log.i(TAG, "Getting the time from ${ntpHosts.size} IP address(es): ${ntpHosts.contentToString()}...")
 
-        val para:ParallelProcess<String, Array<InetAddress>?> = ParallelProcess{
-            InetAddress.getAllByName(it)?.filterNotNull()?.filter{it.isReachable()}?.toTypedArray()
+        val para:ParallelProcess<String, Array<InetAddress>?> = ParallelProcess{url ->
+            InetAddress.getAllByName(url)?.filterNotNull()?.filter{it.isReachable()}?.toTypedArray()
         }
         para.oneWorkerPerElement(ntpHosts)
         val results:List<Array<InetAddress>?> = para.collectOutputWhenFinished()
@@ -148,13 +148,14 @@ object MuTime {
      * to store time data across app closes, system reboots and system clock user-meddling.
      * @param c a Context object which is needed for accessing SharedPreferences*/
     fun enableDiskCache(context:Context) {
+        registerRebootWatcher(context)
         persistence = DiskCache(context.getSharedPreferences(DiskCache.SHARED_PREFS_KEY,
                 Context.MODE_PRIVATE))
     }
 
-    /**Disable storing of Time Data on-disk.
-     * This method is provided for the sake of API completeness; why would you actually want to?*/
-    fun disableDiskCache() {
+    /**Disable storing of Time Data on-disk.*/
+    fun disableDiskCache(context:Context) {
+        unregisterRebootWatcher(context)
         persistence = null
     }
 
