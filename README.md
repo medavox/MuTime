@@ -1,4 +1,10 @@
-# NOTICE: THIS LIBRARY IS NO LONGER MAINTAINED
+# NOTICE: THIS LIBRARY IS NOT MAINTAINED
+
+A rewrite into Kotlin was performed in September 2018, and pushed to master in May 2020.
+
+No further maintenance (beyond releasing this work) is planned.
+
+This is alpha-quality software; use at your own risk.
 
 
 # MuTime for Android
@@ -33,11 +39,9 @@ repositories {
 }
 
 dependencies {
-    compile 'com.github.medavox:MuTime:<release-version>'
+    compile 'com.github.medavox:MuTime:v0.6'
 }
 ```
-
-The current release version is `v0.5`.
 
 # Usage
 
@@ -45,9 +49,9 @@ The current release version is `v0.5`.
 
 ```java
 //optionally enable the disk cache
-MuTime.enableDiskCaching(/*Context*/ this);//this hardens MuTime against clock changes and reboots
+MuTime.enableDiskCache(/*Context*/ this);//this is what actually hardens MuTime against clock changes and reboots
 
-MuTime.requestTimeFromServer("time.google.com");//use any ntp server address here, eg "time.apple.com"
+MuTime.initialize("time.google.com");//use any ntp server address here, eg "time.apple.com"
 
 //get the real time in unix epoch format (milliseconds since midnight on 1 january 1970)
 try {
@@ -58,53 +62,29 @@ catch (MissingTimeDataException e) {
 }
 ```
 
-`requestTimeFromServer(String)` must be run on a background thread. 
+`initialize(String)` **must be run on a background thread.**
 If you run it on the main (UI) thread, you will get a
 [`NetworkOnMainThreadException`](https://developer.android.com/reference/android/os/NetworkOnMainThreadException.html)
 
-
-## Complex (NTP) Version
-
-If you use the [Ntp](https://github.com/medavox/MuTime/blob/master/library/src/main/java/com/medavox/library/mutime/Ntp.java) class then you get full NTP.
-
-Use the `performNtpAlgorithm(InetAddress...)` method, or alternatively resolve an [NTP pool](https://en.wikipedia.org/wiki/NTP_pool) server to `Inetaddress`es automatically with `resolveNtpPoolToIpAddresses(String)`. You can even resolve multiple NTP servers with `resolveMultipleNtpHosts(String...)`.
-
-```java
-
-//gather NTP data from multiple hosts
-Ntp.performNtpAlgorithm(Ntp.resolveMultipleNtpHosts("pool.ntp.org", "time.google.com", "time.apple.com") );
-
-```
-
-Now, as before:
-
-```java
-try {
-    long theActualTime = mu.now();//throws MissingTimeDataException if we don't know the time
-}
-catch (MissingTimeDataException e) {
-    Log.e("MuTime", "failed to get the actual time:+e.getMessage());
-}
-```
-
 # How is the true time calculated?
 
-It's pretty simple actually. We make a request to an NTP server that gives us the actual time.
-We then establish the delta between device uptime and uptime at the time of the network response.
+It's pretty simple actually. We:-
+
+1. make a request to an NTP server that gives us the actual time.
+2. establish the delta between device uptime and uptime at the time of the network response.
+* resolve the DNS for the provided NTP host to single IP addresses,
+* shoot multiple requests to that single IP, 
+* guard against the above mentioned checks,
+* retry every single failed request,
+* filter the best response,
+* and persist that to disk.
+
 On each subsequent request for the true time "now", we compute the correct time from that offset.
 
-Once we have this offset information, it's valid until the next time you boot your device.
+Once we have this offset information, it's valid until you reboot your device or manually change the system clock.
 This means if you enable the disk caching feature, after a single successful NTP request you can
 use the information on-disk directly without ever making another network request.
 This applies even across application kills -- which can happen frequently if a user has a memory starved device.
-
-## Why Use The Ntp Class Instead of MuTime?
-
-* Implements the full NTP, as opposed to the more basic SNTP (read: far more accurate time)
-* The NTP pool address you provide is resolved into multiple IP addresses
-* We query each IP multiple times, guarding against checks, and take the best response
-* We collect all the responses and again filter for the best result as per the NTP spec
-* Allows you to query multiple, independent NTP server, eg time.google.com and time.apple.com
 
 # Reason For Fork
 
@@ -125,15 +105,14 @@ MuTime implements a more 'stubborn'
 solution, which preserves information about the correct time even after clock changes and device reboots.
 It's a beefed-up version of TrueTime's Disk Cache functionality.
 
-The public API has been revampe, and the underlying codebase largely rewritten,
+The public API has been revamped, and the underlying codebase largely rewritten,
 to improve maintainability (in my humble opinion).
+
+UPDATE May 2020: Kotlin rewrite from September 2018 has been pushed to master.
 
 
 # Notes/tips:
 
-* Each `requestTimeFromServer(String)` call makes an SNTP network request.
-MuTime needs to do this only once -- barring any , if you use MuTime's `withSharedPreferences`
-* Preferably use dependency injection (like [Dagger](http://square.github.io/dagger/)) and create a MuTime @Singleton object
 * You can read up on Wikipedia the differences between [SNTP](https://en.wikipedia.org/wiki/Network_Time_Protocol#SNTP) and [NTP](https://www.meinbergglobal.com/english/faq/faq_37.htm).
 
 ## Troubleshooting/Exception handling:
@@ -165,25 +144,6 @@ It's pretty simple:
 
 * Keep retrying the request, until you get a successful one. Yes it does happen eventually :)
 * Try picking a better NTP pool server. In our experience `time.apple.com` has worked best
-
-Or if you want the library to just handle that, use the Rx-ified version of the library (note the -rx suffix):
-
-```
-    compile 'com.github.instacart.truetime-android:library-extension-rx:<release-version>'
-```
-
-With MuTimeRx, we go the whole nine yards and implement the complete NTP Spec.
-
-We:-
-
-* resolve the DNS for the provided NTP host to single IP addresses,
-* shoot multiple requests to that single IP, 
-* guard against the above mentioned checks,
-* retry every single failed request,
-* filter the best response,
-* and persist that to disk.
-
-If you don't use MuTimeRx, you don't get these benefits.
 
 # Useful Links
 
