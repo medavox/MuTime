@@ -2,7 +2,7 @@
 
 A rewrite into Kotlin was performed in September 2018, and pushed to master in May 2020.
 
-No further maintenance (beyond releasing this work) is planned, although contributions are always welcome.
+No further maintenance (beyond releasing this work) is planned, although contributions (in the form of pull requests) are always welcome.
 
 This is alpha-quality software; use at your own risk.
 
